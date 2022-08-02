@@ -97,11 +97,8 @@ class Lecture(models.Model):
         related_name='lectures',
         on_delete=models.PROTECT
     )
-    schedule_start = models.DateTimeField('Schedule start')
-    schedule_end = models.DateTimeField('Schedule end')
-
-    fact_start = models.DateTimeField('Fact start', blank=True)
-    fact_end = models.DateTimeField('Fact end', blank=True)
+    start = models.DateTimeField('Start')
+    end = models.DateTimeField('Schedule end')
 
 
 class Question(models.Model):
