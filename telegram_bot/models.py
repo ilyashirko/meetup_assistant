@@ -20,10 +20,12 @@ class Person(models.Model):
     patronymic = models.CharField('Patronymic', max_length=50, blank=True)
 
     phone_number = PhoneNumberField('Phone number')
+    email = models.EmailField('E-mail')
+
+    company = models.CharField()
 
     telegram_id = models.SmallIntegerField('Telegram ID')
 
-class Guest(Person):
     specializations = models.ManyToManyField(
         'Specialization',
         verbose_name='Specializations',
@@ -38,14 +40,11 @@ class Guest(Person):
     ('TL', 'team lead'),
     ('PM', 'project manager')
 ]
-    grade = models.CharField('grade', max_length=50, choices=GRADES)
+    grade = models.CharField('grade', max_length=50, choices=GRADES, blank=True)
 
     def __str__(self):
         return f'{self.second_name} {self.first_name} ({self.grade})'
 
-
-class Speaker(Person):
-    pass
 
 class Organizer(Person):
     pass
@@ -93,7 +92,7 @@ class Lecture(models.Model):
         on_delete=models.PROTECT
     )
     speaker = models.ForeignKey(
-        'Speaker',
+        'Person',
         verbose_name='Event',
         related_name='lectures',
         on_delete=models.PROTECT
@@ -116,14 +115,14 @@ class Question(models.Model):
         editable=False
     )
     guest = models.ForeignKey(
-        'Guest',
+        'Person',
         verbose_name='Guest',
         related_name='questions',
         on_delete=models.PROTECT
     )
 
     speaker = models.ForeignKey(
-        'Speaker',
+        'Person',
         verbose_name='Speaker',
         related_name='questions',
         on_delete=models.PROTECT
