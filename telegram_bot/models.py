@@ -15,43 +15,22 @@ class Person(models.Model):
         primary_key=True,
         editable=False
     )
-    first_name = models.CharField('First name', max_length=50)
-    last_name = models.CharField('Last name', max_length=50)
+    first_name = models.CharField('First name', max_length=50, blank=True)
+    last_name = models.CharField('Last name', max_length=50, blank=True)
     patronymic = models.CharField('Patronymic', max_length=50, blank=True)
 
-    phone_number = PhoneNumberField('Phone number')
-    email = models.EmailField('E-mail')
+    phone_number = PhoneNumberField('Phone number', blank=True)
+    email = models.EmailField('E-mail', blank=True)
 
-    company = models.CharField()
+    company = models.CharField('Company', max_length=100, blank=True)
 
     telegram_id = models.SmallIntegerField('Telegram ID')
 
-    specializations = models.ManyToManyField(
-        'Specialization',
-        verbose_name='Specializations',
-        related_name='guests',
-    )
-
-    GRADES = [
-    ('BG', 'beginner'),
-    ('JN', 'junior'),
-    ('MD', 'middle'),
-    ('SR', 'senior'),
-    ('TL', 'team lead'),
-    ('PM', 'project manager')
-]
-    grade = models.CharField('grade', max_length=50, choices=GRADES, blank=True)
-
     def __str__(self):
-        return f'{self.second_name} {self.first_name} ({self.grade})'
-
-
-class Organizer(Person):
-    pass
-
-
-class Specialization(models.Model):
-    title = models.CharField('Specialization', max_length=100)
+        return (
+            f'{self.second_name if self.second_name else "User"} '
+            f'{self.first_name if self.first_name else ""} ({self.telegram_id})'
+        )
 
 
 class Event(models.Model):
@@ -66,11 +45,20 @@ class Event(models.Model):
     )
     title = models.CharField('Event title', max_length=200)
     description = models.TextField('Description', blank=True)
+    organizer = models.ForeignKey(
+        'Person',
+        verbose_name='Organizer',
+        related_name='events',
+        on_delete=models.PROTECT
+    )
     start = models.DateTimeField('Start')
     finish = models.DateTimeField('Finish')
 
     def in_process(self):
         return self.start < datetime.now() < self.finish
+
+    def __str__(self):
+        return self.title
 
 
 class Lecture(models.Model):
@@ -100,6 +88,9 @@ class Lecture(models.Model):
     start = models.DateTimeField('Start')
     end = models.DateTimeField('Schedule end')
 
+    def __str__(self):
+        return f'{self.title} ({self.speaker})'
+
 
 class Question(models.Model):
     uuid = models.CharField(
@@ -114,14 +105,14 @@ class Question(models.Model):
     guest = models.ForeignKey(
         'Person',
         verbose_name='Guest',
-        related_name='questions',
+        related_name='questions_from',
         on_delete=models.PROTECT
     )
 
     speaker = models.ForeignKey(
         'Person',
         verbose_name='Speaker',
-        related_name='questions',
+        related_name='questions_to',
         on_delete=models.PROTECT
     )
 
@@ -130,4 +121,7 @@ class Question(models.Model):
 
     # Оставляет право не отвечать на вопрос если он не по делу
     processed = models.BooleanField('Processed', default=True)
+
+    def __str__(self):
+        return f'{self.question[:100]}{"..." if len(self.question) < 100 else ""}'
     
