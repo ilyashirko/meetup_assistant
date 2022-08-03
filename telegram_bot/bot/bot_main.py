@@ -1,7 +1,9 @@
 import telegram
-from telegram import KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import Updater, MessageHandler, CallbackContext, CommandHandler
 from telegram.ext.filters import Filters
+
+
 import os
 from dotenv import load_dotenv
 
@@ -10,15 +12,33 @@ from telegram_bot.models import Person, Event, Lecture, Question
 
 
 QUESTIONS_BUTTON = 'Посмотреть вопросы'
+FIRST, SECOND = range(2)
+SCHEDULE, NETWORKING, MY_QUESTION, DONATE = range(4)
 
 
 def start(update, context):
     user_telegram_id = update.message.from_user.id
     context.bot.send_message(
         chat_id=update.effective_chat.id,
-        text='Здравствуйте, вы зарегистрированы на событие'
+        text='Здравствуйте, вы зарегистрированы на событие.'
     )
     Person.objects.get_or_create(telegram_id=user_telegram_id)
+
+    keyboard = [
+        [
+            InlineKeyboardButton("Узнать расписание", callback_data=str(SCHEDULE)),
+            InlineKeyboardButton("Познакомиться с кем нибудь", callback_data=str(NETWORKING))
+        ],
+        [
+            InlineKeyboardButton("Задать вопрос спикеру", callback_data=str(MY_QUESTION)),
+            InlineKeyboardButton("Задонатить", callback_data=str(DONATE))
+        ]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    # Отправляем сообщение с текстом и добавленной клавиатурой `reply_markup`
+    update.message.reply_text(
+        text="Чем хотите заняться?", reply_markup=reply_markup
+    )
 
 
 def button_questions_handler(update: telegram.Update, context: CallbackContext):
