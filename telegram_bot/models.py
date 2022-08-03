@@ -30,7 +30,7 @@ class Person(models.Model):
     def __str__(self):
         return (
             f'{self.last_name if self.last_name else "User"} '
-            f'{self.first_name if self.first_name else self.id}'
+            f'{self.first_name if self.first_name else self.telegram_id}'
         )
 
 
