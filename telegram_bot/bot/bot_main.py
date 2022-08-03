@@ -42,9 +42,22 @@ def start(update, context):
 
 
 def button_questions_handler(update: telegram.Update, context: CallbackContext):
-    update.message.reply_text(
-        text='Список вопросов: '
+    questions_text = []
+    questions = Question.objects.all()
 
+    for question in questions:
+        to_whom = f'Вопрос для {question.speaker}'
+        from_whom = f'От {question.guest}'
+        quest = f'Вопрос: {question.question}'
+        text = f'{to_whom} \n{from_whom} \n{quest}'
+        questions_text.append(text)
+
+    answer_text = ''
+    for q_text in questions_text:
+        answer_text += f'{q_text} \n\n'
+
+    update.message.reply_text(
+        text=f'Список вопросов: \n\n\n{answer_text}'
     )
 
 
