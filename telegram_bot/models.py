@@ -107,6 +107,14 @@ class Question(models.Model):
         primary_key=True,
         editable=False
     )
+    event = models.ForeignKey(
+        'Event',
+        verbose_name='Event',
+        related_name='questions',
+        on_delete=models.PROTECT,
+        default=None,
+        null=True
+    )
     guest = models.ForeignKey(
         'Person',
         verbose_name='Guest',
