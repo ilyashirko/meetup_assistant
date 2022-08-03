@@ -1,5 +1,5 @@
-from telegram_bot.bot import tg_bot
 import telegram
+from telegram import KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import Updater, MessageHandler, CallbackContext
 from telegram.ext.filters import Filters
 import os
@@ -8,8 +8,33 @@ from dotenv import load_dotenv
 from telegram_bot.models import Person, Event, Lecture, Question
 
 
+QUESTIONS_BUTTON = 'Посмотреть вопросы'
+
+
+def button_questions_handler(update: telegram.Update, context: CallbackContext):
+    update.message.reply_text(
+        text='Список вопросов: '
+
+    )
+
+
 def message_handler(update: telegram.Update, context: CallbackContext):
-    update.message.reply_text(text='Я получил ваше сообщение')
+    text = update.message.text
+    if text == QUESTIONS_BUTTON:
+        return button_questions_handler(update=update, context=context)
+    reply_markup = ReplyKeyboardMarkup(
+        keyboard=[
+            [
+                KeyboardButton(text=QUESTIONS_BUTTON)
+            ]
+        ],
+        resize_keyboard=True
+    )
+
+    update.message.reply_text(
+        text='Wellcome',
+        reply_markup=reply_markup
+    )
 
 
 def main():
