@@ -8,3 +8,5 @@ venv
 # data files & dirs
 media
 *.sqlite3
+
+.env
