@@ -1,3 +1,4 @@
+from textwrap import dedent
 from django.db import models
 from datetime import datetime
 import uuid
@@ -29,7 +30,7 @@ class Person(models.Model):
     def __str__(self):
         return (
             f'{self.last_name if self.last_name else "User"} '
-            f'{self.first_name if self.first_name else ""} ({self.telegram_id})'
+            f'{self.first_name if self.first_name else self.id}'
         )
 
 
@@ -61,6 +62,32 @@ class Event(models.Model):
 
     def in_process(self):
         return self.start < datetime.now() < self.finish
+
+    def _convert_time(self, date_time):
+        hour = date_time.hour
+        minute = date_time.minute
+        if 10 > hour >= 0:
+            hour = f'0{hour}'
+        if minute < 10:
+            minute = f'0{minute}'
+        return f'{hour}:{minute}'
+        
+    def get_programm(self):
+        lectures = self.lectures.all().order_by('start')
+        programm = (
+            f'{self.title}\n\n'
+
+            f'Время начала: {self.start}\n'
+            f'Время завершения: {self.finish}\n'
+        )
+        for lecture in lectures:
+            programm += (
+                f'\n{self._convert_time(lecture.start)} - '
+                f'{lecture.title} ({lecture.speaker})'
+            )
+        return programm
+
+
 
     def __str__(self):
         return self.title
