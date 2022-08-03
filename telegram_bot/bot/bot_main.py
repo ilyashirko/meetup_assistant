@@ -1,14 +1,24 @@
 import telegram
 from telegram import KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove
-from telegram.ext import Updater, MessageHandler, CallbackContext
+from telegram.ext import Updater, MessageHandler, CallbackContext, CommandHandler
 from telegram.ext.filters import Filters
 import os
 from dotenv import load_dotenv
+
 
 from telegram_bot.models import Person, Event, Lecture, Question
 
 
 QUESTIONS_BUTTON = 'Посмотреть вопросы'
+
+
+def start(update, context):
+    user_telegram_id = update.message.from_user.id
+    context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text='Здравствуйте, вы зарегистрированы на событие'
+    )
+    Person.objects.get_or_create(telegram_id=user_telegram_id)
 
 
 def button_questions_handler(update: telegram.Update, context: CallbackContext):
@@ -41,7 +51,10 @@ def main():
     load_dotenv()
     tg_bot_token = os.getenv('TG_BOT_TOKEN')
 
+    start_handler = CommandHandler('start', start)
+
     updater = Updater(token=tg_bot_token, use_context=True)
+    updater.dispatcher.add_handler(start_handler)
     updater.dispatcher.add_handler(MessageHandler(filters=Filters.all, callback=message_handler))
 
     updater.start_polling()
