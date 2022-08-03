@@ -28,7 +28,7 @@ class Person(models.Model):
 
     def __str__(self):
         return (
-            f'{self.second_name if self.second_name else "User"} '
+            f'{self.last_name if self.last_name else "User"} '
             f'{self.first_name if self.first_name else ""} ({self.telegram_id})'
         )
 
@@ -48,8 +48,13 @@ class Event(models.Model):
     organizer = models.ForeignKey(
         'Person',
         verbose_name='Organizer',
-        related_name='events',
+        related_name='organized_events',
         on_delete=models.PROTECT
+    )
+    participants = models.ManyToManyField(
+        'Person',
+        verbose_name='Participants',
+        related_name='took_parts_in',
     )
     start = models.DateTimeField('Start')
     finish = models.DateTimeField('Finish')
