@@ -12,6 +12,7 @@ from telegram_bot.models import Person, Event, Lecture, Question
 
 
 QUESTIONS_BUTTON = 'Посмотреть вопросы'
+ANSWER = range(1)
 FIRST, SECOND = range(2)
 SCHEDULE, NETWORKING, MY_QUESTION, DONATE = range(4)
 
@@ -52,13 +53,17 @@ def button_questions_handler(update: telegram.Update, context: CallbackContext):
         text = f'{to_whom} \n{from_whom} \n{quest}'
         questions_text.append(text)
 
-    answer_text = ''
     for q_text in questions_text:
-        answer_text += f'{q_text} \n\n'
-
-    update.message.reply_text(
-        text=f'Список вопросов: \n\n\n{answer_text}'
-    )
+        update.message.reply_text(
+            text=f'Вопрос: \n\n{q_text}',
+            reply_markup = InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [
+                        InlineKeyboardButton('Ответить', callback_data=str(ANSWER))
+                    ]
+                ]
+            )
+        )
 
 
 def message_handler(update: telegram.Update, context: CallbackContext):
