@@ -8,7 +8,7 @@ def get_donation_amount(update, context):
     
     try:
         _, event_uuid = update.callback_query.data.split(':')
-        event = Event.objects.get(uuid=event_uuid)
+        event = Event.objects.get(uuid=event_uuid)      
     except (ValueError, Event.DoesNotExist):
         event = Event.objects.first()
 
@@ -16,7 +16,8 @@ def get_donation_amount(update, context):
 
     payment, _ = Donate.objects.get_or_create(event=event, user=user, summ=None)
     
-    os.environ.setdefault(f'{update.effective_chat.id}', f'donation:{payment.payment_id}')
+    os.environ.setdefault(f'{update.effective_chat.id}', '')
+    os.environ[f'{update.effective_chat.id}'] = f'donation:{payment.payment_id}'
     
     context.bot.send_message(
         chat_id=update.effective_chat.id,
@@ -46,7 +47,7 @@ def confirm_payment(update, context):
     donate.confirmed = True
     donate.save()
     print(os.getenv(f'{donate.user.telegram_id}'))
-    os.environ.setdefault(f'{donate.user.telegram_id}', 'empty')
+    os.environ.pop(f'{donate.user.telegram_id}', 'empty')
 
 
 def cancel_payments(update, context):
