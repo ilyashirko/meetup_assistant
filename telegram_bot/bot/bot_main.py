@@ -35,7 +35,7 @@ def start(update, context):
         ],
         [
             InlineKeyboardButton("Задать вопрос спикеру", callback_data=str(MY_QUESTION)),
-            InlineKeyboardButton("Задонатить", callback_data=str(DONATE))
+            InlineKeyboardButton("Задонатить", callback_data='make_donation')
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
