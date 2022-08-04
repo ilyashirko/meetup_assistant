@@ -163,15 +163,16 @@ def main():
     schedule_handler = CommandHandler('schedule', get_schedule)
 
     updater = Updater(token=tg_bot_token, use_context=True)
+    
     updater.dispatcher.add_handler(start_handler)
     updater.dispatcher.add_handler(schedule_handler)
-    updater.dispatcher.add_handler(MessageHandler(filters=Filters.all, callback=message_handler))
+    
     updater.dispatcher.add_handler(answer_button_handler)
     
     updater.dispatcher.add_handler(CallbackQueryHandler(get_donation_amount, pattern='make_donation'))
     updater.dispatcher.add_handler(CallbackQueryHandler(cancel_payments, pattern='cancel_donation'))
     updater.dispatcher.add_handler(PreCheckoutQueryHandler(confirm_payment))
-    
+    updater.dispatcher.add_handler(MessageHandler(filters=Filters.all, callback=message_handler))
     updater.start_polling()
     updater.idle()
 
