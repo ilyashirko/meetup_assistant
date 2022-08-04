@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from telegram_bot.models import Person, Event, Lecture, Question
+from telegram_bot.models import Person, Event, Lecture, Question, Donate
 
 
 @admin.register(Person)
@@ -24,3 +24,8 @@ class LectureAdmin(admin.ModelAdmin):
 @admin.register(Question)
 class QuestionAdmin(admin.ModelAdmin):
     list_filter = ('event', 'speaker', 'processed',)
+
+
+@admin.register(Donate)
+class DonateAdmin(admin.ModelAdmin):
+    list_display = ('payment_id', 'event', 'user', 'summ', 'confirmed')
