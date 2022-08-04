@@ -45,7 +45,8 @@ def confirm_payment(update, context):
     donate = Donate.objects.get(payment_id=update.pre_checkout_query.invoice_payload)
     donate.confirmed = True
     donate.save()
-    os.environ.setdefault(f'{donate.user.telegram_id}', '')
+    print(os.getenv(f'{donate.user.telegram_id}'))
+    os.environ.setdefault(f'{donate.user.telegram_id}', 'empty')
 
 
 def cancel_payments(update, context):

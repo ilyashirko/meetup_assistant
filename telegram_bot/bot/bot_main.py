@@ -1,14 +1,18 @@
 import os
-from dotenv import load_dotenv
-from django.utils import timezone
+from textwrap import dedent
 
 import telegram
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove
-from telegram.ext import Updater, MessageHandler, CallbackContext, CommandHandler, CallbackQueryHandler
+from django.utils import timezone
+from dotenv import load_dotenv
+from telegram import (InlineKeyboardButton, InlineKeyboardMarkup,
+                      KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove)
+from telegram.ext import (CallbackContext, CallbackQueryHandler,
+                          CommandHandler, MessageHandler,
+                          PreCheckoutQueryHandler, Updater)
 from telegram.ext.filters import Filters
-
-from telegram_bot.models import Person, Event, Lecture, Question
-
+from telegram_bot.bot.payment import (cancel_payments, confirm_payment,
+                                      get_donation_amount, make_payment)
+from telegram_bot.models import Event, Lecture, Person, Question
 
 QUESTIONS_BUTTON = 'Посмотреть вопросы'
 ANSWER = 'Ответить'
@@ -103,6 +107,35 @@ def button_answer_handler(update: telegram.Update, context: CallbackContext):
 
 
 def message_handler(update: telegram.Update, context: CallbackContext):
+
+    # ДОНАТ
+    print(os.getenv(f'{update.effective_chat.id}'))
+    try:
+        if 'donation' in os.getenv(f'{update.effective_chat.id}'):
+            try:
+                _, payment_id = os.getenv(f'{update.effective_chat.id}').split(':')
+                return make_payment(update, context, payment_id, int(update.message.text))
+            except ValueError:
+                return context.bot.send_message(
+                    chat_id=update.effective_chat.id,
+                    text=dedent(
+                        """
+                        Введена недопустимая сумма перевода.
+                        Проверьте, должны быть только цифры.
+                        
+                        Если передумали донатить, нажмите кнопку отмены.
+                        """
+                    ),
+                    reply_markup=InlineKeyboardMarkup(
+                        inline_keyboard=[[
+                            InlineKeyboardButton('Отменить донат', callback_data='cancel_donation')
+                        ]]
+                    )
+                )
+    except TypeError:
+        pass
+    # ДОНАТ ЗАВЕРШЕН
+
     text = update.message.text
     if text == QUESTIONS_BUTTON:
         return button_questions_handler(update=update, context=context)
@@ -126,7 +159,7 @@ def main():
     tg_bot_token = os.getenv('TG_BOT_TOKEN')
 
     start_handler = CommandHandler('start', start)
-    answer_button_handler = CallbackQueryHandler(callback=button_answer_handler, pattern=ANSWER
+    answer_button_handler = CallbackQueryHandler(callback=button_answer_handler, pattern=ANSWER)
     schedule_handler = CommandHandler('schedule', get_schedule)
 
     updater = Updater(token=tg_bot_token, use_context=True)
@@ -134,7 +167,11 @@ def main():
     updater.dispatcher.add_handler(schedule_handler)
     updater.dispatcher.add_handler(MessageHandler(filters=Filters.all, callback=message_handler))
     updater.dispatcher.add_handler(answer_button_handler)
-
+    
+    updater.dispatcher.add_handler(CallbackQueryHandler(get_donation_amount, pattern='make_donation'))
+    updater.dispatcher.add_handler(CallbackQueryHandler(cancel_payments, pattern='cancel_donation'))
+    updater.dispatcher.add_handler(PreCheckoutQueryHandler(confirm_payment))
+    
     updater.start_polling()
     updater.idle()
 
