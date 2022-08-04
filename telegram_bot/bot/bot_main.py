@@ -1,12 +1,11 @@
+import os
+from dotenv import load_dotenv
+from django.utils import timezone
+
 import telegram
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import Updater, MessageHandler, CallbackContext, CommandHandler
 from telegram.ext.filters import Filters
-
-
-import os
-from dotenv import load_dotenv
-
 
 from telegram_bot.models import Person, Event, Lecture, Question
 
@@ -36,11 +35,24 @@ def start(update, context):
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    # Отправляем сообщение с текстом и добавленной клавиатурой `reply_markup`
     update.message.reply_text(
         text="Чем хотите заняться?", reply_markup=reply_markup
     )
 
+
+def get_schedule(update, context):
+    curr_date=timezone.localtime()
+    curr_events = Event.objects.filter(finish__gt=curr_date, start__lte=curr_date)
+
+    for event in curr_events:
+        lectures = event.lectures.all()
+        lectures_schedule = ''
+        for lecture in lectures:
+            lectures_schedule += f'{lecture.title}\nСпикер: {lecture.speaker}\nНачало: {lecture.start.time()}\nКонец: {lecture.end.time()}\n\n'
+        context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=f'{event.title}\n{event.description}\n{lectures_schedule}'
+        )
 
 def button_questions_handler(update: telegram.Update, context: CallbackContext):
     questions_text = []
@@ -90,9 +102,11 @@ def main():
     tg_bot_token = os.getenv('TG_BOT_TOKEN')
 
     start_handler = CommandHandler('start', start)
+    schedule_handler = CommandHandler('schedule', get_schedule)
 
     updater = Updater(token=tg_bot_token, use_context=True)
     updater.dispatcher.add_handler(start_handler)
+    updater.dispatcher.add_handler(schedule_handler)
     updater.dispatcher.add_handler(MessageHandler(filters=Filters.all, callback=message_handler))
 
     updater.start_polling()
