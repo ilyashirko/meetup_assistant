@@ -4,14 +4,14 @@ from django.utils import timezone
 
 import telegram
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove
-from telegram.ext import Updater, MessageHandler, CallbackContext, CommandHandler
+from telegram.ext import Updater, MessageHandler, CallbackContext, CommandHandler, CallbackQueryHandler
 from telegram.ext.filters import Filters
 
 from telegram_bot.models import Person, Event, Lecture, Question
 
 
 QUESTIONS_BUTTON = 'Посмотреть вопросы'
-ANSWER = range(1)
+ANSWER = 'Ответить'
 FIRST, SECOND = range(2)
 SCHEDULE, NETWORKING, MY_QUESTION, DONATE = range(4)
 
@@ -59,22 +59,46 @@ def button_questions_handler(update: telegram.Update, context: CallbackContext):
     questions = Question.objects.all()
 
     for question in questions:
-        to_whom = f'Вопрос для {question.speaker}'
-        from_whom = f'От {question.guest}'
-        quest = f'Вопрос: {question.question}'
-        text = f'{to_whom} \n{from_whom} \n{quest}'
-        questions_text.append(text)
+        serialize_question = {
+            'uuid': question.uuid,
+            'speaker': question.speaker,
+            'guest': question.guest,
+            'question': question.question,
+        }
+        questions_text.append(serialize_question)
 
     for q_text in questions_text:
+        question_uuid = 'id вопроса {}'.format(q_text['uuid'])
+        to_whom = 'Вопрос для {}'.format(q_text['speaker'])
+        from_whom = 'От {}'.format(q_text['guest'])
+        quest = 'Вопрос: {}'.format(q_text['question'])
+        answer_text = f'{question_uuid} \n{to_whom} \n{from_whom} \n{quest}'
+
+        callback = '{}_{}'.format(ANSWER, q_text['uuid'])
+
         update.message.reply_text(
-            text=f'Вопрос: \n\n{q_text}',
+            text=f'Вопрос: \n\n{answer_text}',
             reply_markup = InlineKeyboardMarkup(
                 inline_keyboard=[
                     [
-                        InlineKeyboardButton('Ответить', callback_data=str(ANSWER))
+                        InlineKeyboardButton(ANSWER, callback_data=callback)
                     ]
                 ]
             )
+        )
+
+
+def button_answer_handler(update: telegram.Update, context: CallbackContext):
+    query = update.callback_query
+    data = query.data
+
+    chat_id = update.effective_message.chat_id
+    current_text = update.effective_message.text
+    
+    if ANSWER in data:
+        context.bot.send_message(
+            chat_id=chat_id,
+            text=data
         )
 
 
@@ -102,12 +126,14 @@ def main():
     tg_bot_token = os.getenv('TG_BOT_TOKEN')
 
     start_handler = CommandHandler('start', start)
+    answer_button_handler = CallbackQueryHandler(callback=button_answer_handler, pattern=ANSWER
     schedule_handler = CommandHandler('schedule', get_schedule)
 
     updater = Updater(token=tg_bot_token, use_context=True)
     updater.dispatcher.add_handler(start_handler)
     updater.dispatcher.add_handler(schedule_handler)
     updater.dispatcher.add_handler(MessageHandler(filters=Filters.all, callback=message_handler))
+    updater.dispatcher.add_handler(answer_button_handler)
 
     updater.start_polling()
     updater.idle()
