@@ -17,10 +17,20 @@ SCHEDULE, NETWORKING, MY_QUESTION, DONATE = range(4)
 
 
 def start(update, context):
+    quest_reply_markup = ReplyKeyboardMarkup(
+        keyboard=[
+            [
+                KeyboardButton(text=QUESTIONS_BUTTON)
+            ]
+        ],
+        resize_keyboard=True
+    )
+
     user_telegram_id = update.message.from_user.id
     context.bot.send_message(
         chat_id=update.effective_chat.id,
-        text='Здравствуйте, вы зарегистрированы на событие.'
+        text='Здравствуйте, вы зарегистрированы на событие.',
+        reply_markup=quest_reply_markup
     )
     Person.objects.get_or_create(telegram_id=user_telegram_id)
 
@@ -96,16 +106,36 @@ def button_answer_handler(update: telegram.Update, context: CallbackContext):
     current_text = update.effective_message.text
     
     if ANSWER in data:
+        uuid = data[9:]
+        question = Question.objects.get(uuid=uuid)
         context.bot.send_message(
             chat_id=chat_id,
-            text=data
+            text=f'Введите ответ на вопрос от пользователя {question.guest}. Для того что бы ваш ответ был зарегистрирован и отправлен пользователю задавшему вопрос начните ответ со слова "+Ответ+"',
         )
+        context.user_data['queston_uuid'] = question.uuid
+
+
+def speaker_answer_handler(update: telegram.Update, context: CallbackContext):
+    text = update.message.text
+    uuid = context.user_data['queston_uuid']
+
+    question = Question.objects.get(uuid=uuid)
+    question.answer = text
+    question.save()
+
+    update.message.reply_text(
+        text=f'Вы ввели: \n\n{text} \n\n ID вопроса: {uuid}'
+    )
 
 
 def message_handler(update: telegram.Update, context: CallbackContext):
     text = update.message.text
     if text == QUESTIONS_BUTTON:
         return button_questions_handler(update=update, context=context)
+    
+    if '+Ответ+' in text:
+        return speaker_answer_handler(update=update, context=context)
+
     reply_markup = ReplyKeyboardMarkup(
         keyboard=[
             [
@@ -126,7 +156,7 @@ def main():
     tg_bot_token = os.getenv('TG_BOT_TOKEN')
 
     start_handler = CommandHandler('start', start)
-    answer_button_handler = CallbackQueryHandler(callback=button_answer_handler, pattern=ANSWER
+    answer_button_handler = CallbackQueryHandler(callback=button_answer_handler, pattern=ANSWER)
     schedule_handler = CommandHandler('schedule', get_schedule)
 
     updater = Updater(token=tg_bot_token, use_context=True)
