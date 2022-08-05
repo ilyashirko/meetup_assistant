@@ -78,26 +78,31 @@ def button_questions_handler(update: telegram.Update, context: CallbackContext):
             'question': question.question,
         }
         questions_text.append(serialize_question)
-
-    for q_text in questions_text:
-        question_uuid = 'id вопроса {}'.format(q_text['uuid'])
-        to_whom = 'Вопрос для {}'.format(q_text['speaker'])
-        from_whom = 'От {}'.format(q_text['guest'])
-        quest = 'Вопрос: {}'.format(q_text['question'])
-        answer_text = f'{question_uuid} \n{to_whom} \n{from_whom} \n{quest}'
-
-        callback = '{}_{}'.format(ANSWER, q_text['uuid'])
-
+    
+    if not questions_text:
         update.message.reply_text(
-            text=f'Вопрос: \n\n{answer_text}',
-            reply_markup = InlineKeyboardMarkup(
-                inline_keyboard=[
-                    [
-                        InlineKeyboardButton(ANSWER, callback_data=callback)
-                    ]
-                ]
-            )
+            text='Вам пока не задали вопросов.'
         )
+    else:
+        for q_text in questions_text:
+            question_uuid = 'id вопроса {}'.format(q_text['uuid'])
+            to_whom = 'Вопрос для {}'.format(q_text['speaker'])
+            from_whom = 'От {}'.format(q_text['guest'])
+            quest = 'Вопрос: {}'.format(q_text['question'])
+            answer_text = f'{question_uuid} \n{to_whom} \n{from_whom} \n{quest}'
+
+            callback = '{}_{}'.format(ANSWER, q_text['uuid'])
+
+            update.message.reply_text(
+                text=f'Вопрос: \n\n{answer_text}',
+                reply_markup = InlineKeyboardMarkup(
+                    inline_keyboard=[
+                        [
+                            InlineKeyboardButton(ANSWER, callback_data=callback)
+                        ]
+                    ]
+                )
+            )
 
 
 def button_answer_handler(update: telegram.Update, context: CallbackContext):
@@ -134,7 +139,7 @@ def speaker_answer_handler(update: telegram.Update, context: CallbackContext):
     )
 
     update.message.reply_text(
-        text=f'Ответ на вопрос: {uuid} отправлет пользователю'
+        text=f'Ответ на вопрос: {uuid} отправлен пользователю'
     )
 
 
