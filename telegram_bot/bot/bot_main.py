@@ -218,6 +218,7 @@ def message_handler(update: telegram.Update, context: CallbackContext):
         question = Question.objects.get(uuid=question_uuid)
         question.question = update.message.text
         question.save()
+        os.environ.pop(f'{update.effective_chat.id}')
 
     # ДОНАТ
     print(os.getenv(f'{update.effective_chat.id}'))
