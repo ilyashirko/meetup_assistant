@@ -4,8 +4,7 @@ from textwrap import dedent
 import telegram
 from django.utils import timezone
 from dotenv import load_dotenv
-from telegram import (InlineKeyboardButton, InlineKeyboardMarkup,
-                      KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove)
+from telegram import (InlineKeyboardButton, InlineKeyboardMarkup)
 from telegram.ext import (CallbackContext, CallbackQueryHandler,
                           CommandHandler, MessageHandler,
                           PreCheckoutQueryHandler, Updater)
@@ -21,24 +20,7 @@ FIRST, SECOND = range(2)
 SCHEDULE, NETWORKING, MY_QUESTION, DONATE = range(4)
 
 
-def start(update, context):
-    quest_reply_markup = ReplyKeyboardMarkup(
-        keyboard=[
-            [
-                KeyboardButton(text=QUESTIONS_BUTTON)
-            ]
-        ],
-        resize_keyboard=True
-    )
-
-    user_telegram_id = update.message.from_user.id
-    context.bot.send_message(
-        chat_id=update.effective_chat.id,
-        text='Здравствуйте, вы зарегистрированы на событие.',
-        reply_markup=quest_reply_markup
-    )
-    Person.objects.get_or_create(telegram_id=user_telegram_id)
-
+def get_keyboard():
     keyboard = [
         [
             InlineKeyboardButton("Узнать расписание", callback_data=str(SCHEDULE)),
@@ -47,9 +29,25 @@ def start(update, context):
         [
             InlineKeyboardButton("Задать вопрос спикеру", callback_data=str(MY_QUESTION)),
             InlineKeyboardButton("Задонатить", callback_data='make_donation')
+        ],
+        [
+            InlineKeyboardButton(QUESTIONS_BUTTON, callback_data=QUESTIONS_BUTTON)
         ]
     ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    return keyboard
+
+
+def start(update, context):
+
+    user_telegram_id = update.message.from_user.id
+    context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text='Здравствуйте, вы зарегистрированы на событие.'
+    )
+    Person.objects.get_or_create(telegram_id=user_telegram_id)
+
+    reply_markup = InlineKeyboardMarkup(get_keyboard())
     update.message.reply_text(
         text="Чем хотите заняться?", reply_markup=reply_markup
     )
@@ -70,7 +68,7 @@ def get_schedule(update, context):
         )
 
 def button_questions_handler(update: telegram.Update, context: CallbackContext):
-    user = update.message.chat_id
+    user = context.user_data['chat_id']
 
     questions_text = []
     questions = Question.objects.filter(speaker__telegram_id=user, processed=False)
@@ -85,8 +83,11 @@ def button_questions_handler(update: telegram.Update, context: CallbackContext):
         questions_text.append(serialize_question)
     
     if not questions_text:
-        update.message.reply_text(
-            text='Вам пока не задали вопросов.'
+        reply_markup = InlineKeyboardMarkup(get_keyboard())
+        context.bot.send_message(
+            chat_id=user,
+            text='Вам пока не задали вопросов.',
+            reply_markup=reply_markup
         )
     else:
         for q_text in questions_text:
@@ -99,7 +100,8 @@ def button_questions_handler(update: telegram.Update, context: CallbackContext):
             callback = '{}_{}'.format(ANSWER, q_text['uuid'])
             ignore_callback = '{}_{}'.format(IGNORE, q_text['uuid'])
 
-            update.message.reply_text(
+            context.bot.send_message(
+                chat_id=user,
                 text=f'Вопрос: \n\n{answer_text}',
                 reply_markup = InlineKeyboardMarkup(
                     inline_keyboard=[
@@ -133,11 +135,17 @@ def button_answer_handler(update: telegram.Update, context: CallbackContext):
         question = Question.objects.get(uuid=uuid)
         question.processed = True
         question.save()
+
+        reply_markup = InlineKeyboardMarkup(get_keyboard())
         context.bot.send_message(
             chat_id=chat_id,
-            text='Вопрос {} оставлен без ответа и убран из списка вопросов.'.format(uuid)
-            # text=f'{uuid}'
+            text='Вопрос {} оставлен без ответа и убран из списка вопросов.'.format(uuid),
+            reply_markup=reply_markup
         )
+    
+    if data == QUESTIONS_BUTTON:
+        context.user_data['chat_id'] = chat_id
+        return button_questions_handler(update=update, context=context)
 
 
 def speaker_answer_handler(update: telegram.Update, context: CallbackContext):
@@ -156,8 +164,10 @@ def speaker_answer_handler(update: telegram.Update, context: CallbackContext):
         text=f'Спикер ответил на ваш вопрос {uuid}: \n\n\n{text}'
     )
 
+    reply_markup = InlineKeyboardMarkup(get_keyboard())
     update.message.reply_text(
-        text=f'Ответ на вопрос: {uuid} отправлен пользователю'
+        text=f'Ответ на вопрос: {uuid} отправлен пользователю',
+        reply_markup=reply_markup
     )
 
 
@@ -197,20 +207,6 @@ def message_handler(update: telegram.Update, context: CallbackContext):
     
     if '+Ответ+' in text:
         return speaker_answer_handler(update=update, context=context)
-
-    reply_markup = ReplyKeyboardMarkup(
-        keyboard=[
-            [
-                KeyboardButton(text=QUESTIONS_BUTTON)
-            ]
-        ],
-        resize_keyboard=True
-    )
-
-    update.message.reply_text(
-        text='Wellcome',
-        reply_markup=reply_markup
-    )
 
 
 def main():
