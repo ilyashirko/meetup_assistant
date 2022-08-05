@@ -12,6 +12,7 @@ from telegram_bot.models import Person, Event, Lecture, Question
 
 QUESTIONS_BUTTON = 'Посмотреть вопросы'
 ANSWER = 'Ответить'
+IGNORE = 'ignore'
 FIRST, SECOND = range(2)
 SCHEDULE, NETWORKING, MY_QUESTION, DONATE = range(4)
 
@@ -92,13 +93,15 @@ def button_questions_handler(update: telegram.Update, context: CallbackContext):
             answer_text = f'{question_uuid} \n{to_whom} \n{from_whom} \n{quest}'
 
             callback = '{}_{}'.format(ANSWER, q_text['uuid'])
+            ignore_callback = '{}_{}'.format(IGNORE, q_text['uuid'])
 
             update.message.reply_text(
                 text=f'Вопрос: \n\n{answer_text}',
                 reply_markup = InlineKeyboardMarkup(
                     inline_keyboard=[
                         [
-                            InlineKeyboardButton(ANSWER, callback_data=callback)
+                            InlineKeyboardButton(ANSWER, callback_data=callback),
+                            InlineKeyboardButton('Игнорировать', callback_data=ignore_callback)
                         ]
                     ]
                 )
@@ -120,6 +123,17 @@ def button_answer_handler(update: telegram.Update, context: CallbackContext):
             text=f'Введите ответ на вопрос от пользователя {question.guest}. Для того что бы ваш ответ был зарегистрирован и отправлен пользователю задавшему вопрос начните ответ со слова "+Ответ+"',
         )
         context.user_data['queston_uuid'] = question.uuid
+    
+    if IGNORE in data:
+        uuid = data[7:]
+        question = Question.objects.get(uuid=uuid)
+        question.processed = True
+        question.save()
+        context.bot.send_message(
+            chat_id=chat_id,
+            text='Вопрос {} оставлен без ответа и убран из списка вопросов.'.format(uuid)
+            # text=f'{uuid}'
+        )
 
 
 def speaker_answer_handler(update: telegram.Update, context: CallbackContext):
@@ -171,7 +185,8 @@ def main():
     tg_bot_token = os.getenv('TG_BOT_TOKEN')
 
     start_handler = CommandHandler('start', start)
-    answer_button_handler = CallbackQueryHandler(callback=button_answer_handler, pattern=ANSWER)
+    # answer_button_handler = CallbackQueryHandler(callback=button_answer_handler, pattern=ANSWER)
+    answer_button_handler = CallbackQueryHandler(callback=button_answer_handler)
     schedule_handler = CommandHandler('schedule', get_schedule)
 
     updater = Updater(token=tg_bot_token, use_context=True)
