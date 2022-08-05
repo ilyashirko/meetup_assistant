@@ -123,8 +123,15 @@ def speaker_answer_handler(update: telegram.Update, context: CallbackContext):
     question.answer = text
     question.save()
 
+    guest = question.guest.telegram_id
+
+    context.bot.send_message(
+        chat_id=guest,
+        text=f'Спикер ответил на ваш вопрос {uuid}: \n\n\n{text}'
+    )
+
     update.message.reply_text(
-        text=f'Вы ввели: \n\n{text} \n\n ID вопроса: {uuid}'
+        text=f'Ответ на вопрос: {uuid} отправлет пользователю'
     )
 
 
