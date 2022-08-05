@@ -65,8 +65,10 @@ def get_schedule(update, context):
         )
 
 def button_questions_handler(update: telegram.Update, context: CallbackContext):
+    user = update.message.chat_id
+
     questions_text = []
-    questions = Question.objects.all()
+    questions = Question.objects.filter(speaker__telegram_id=user)
 
     for question in questions:
         serialize_question = {
