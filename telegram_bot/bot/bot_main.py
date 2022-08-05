@@ -16,15 +16,26 @@ from telegram_bot.models import Event, Lecture, Person, Question
 
 QUESTIONS_BUTTON = 'Посмотреть вопросы'
 ANSWER = 'Ответить'
+IGNORE = 'ignore'
 FIRST, SECOND = range(2)
 SCHEDULE, NETWORKING, MY_QUESTION, DONATE = range(4)
 
 
 def start(update, context):
+    quest_reply_markup = ReplyKeyboardMarkup(
+        keyboard=[
+            [
+                KeyboardButton(text=QUESTIONS_BUTTON)
+            ]
+        ],
+        resize_keyboard=True
+    )
+
     user_telegram_id = update.message.from_user.id
     context.bot.send_message(
         chat_id=update.effective_chat.id,
-        text='Здравствуйте, вы зарегистрированы на событие.'
+        text='Здравствуйте, вы зарегистрированы на событие.',
+        reply_markup=quest_reply_markup
     )
     Person.objects.get_or_create(telegram_id=user_telegram_id)
 
@@ -59,8 +70,10 @@ def get_schedule(update, context):
         )
 
 def button_questions_handler(update: telegram.Update, context: CallbackContext):
+    user = update.message.chat_id
+
     questions_text = []
-    questions = Question.objects.all()
+    questions = Question.objects.filter(speaker__telegram_id=user, processed=False)
 
     for question in questions:
         serialize_question = {
@@ -70,26 +83,33 @@ def button_questions_handler(update: telegram.Update, context: CallbackContext):
             'question': question.question,
         }
         questions_text.append(serialize_question)
-
-    for q_text in questions_text:
-        question_uuid = 'id вопроса {}'.format(q_text['uuid'])
-        to_whom = 'Вопрос для {}'.format(q_text['speaker'])
-        from_whom = 'От {}'.format(q_text['guest'])
-        quest = 'Вопрос: {}'.format(q_text['question'])
-        answer_text = f'{question_uuid} \n{to_whom} \n{from_whom} \n{quest}'
-
-        callback = '{}_{}'.format(ANSWER, q_text['uuid'])
-
+    
+    if not questions_text:
         update.message.reply_text(
-            text=f'Вопрос: \n\n{answer_text}',
-            reply_markup = InlineKeyboardMarkup(
-                inline_keyboard=[
-                    [
-                        InlineKeyboardButton(ANSWER, callback_data=callback)
-                    ]
-                ]
-            )
+            text='Вам пока не задали вопросов.'
         )
+    else:
+        for q_text in questions_text:
+            question_uuid = 'id вопроса {}'.format(q_text['uuid'])
+            to_whom = 'Вопрос для {}'.format(q_text['speaker'])
+            from_whom = 'От {}'.format(q_text['guest'])
+            quest = 'Вопрос: {}'.format(q_text['question'])
+            answer_text = f'{question_uuid} \n{to_whom} \n{from_whom} \n{quest}'
+
+            callback = '{}_{}'.format(ANSWER, q_text['uuid'])
+            ignore_callback = '{}_{}'.format(IGNORE, q_text['uuid'])
+
+            update.message.reply_text(
+                text=f'Вопрос: \n\n{answer_text}',
+                reply_markup = InlineKeyboardMarkup(
+                    inline_keyboard=[
+                        [
+                            InlineKeyboardButton(ANSWER, callback_data=callback),
+                            InlineKeyboardButton('Игнорировать', callback_data=ignore_callback)
+                        ]
+                    ]
+                )
+            )
 
 
 def button_answer_handler(update: telegram.Update, context: CallbackContext):
@@ -100,10 +120,45 @@ def button_answer_handler(update: telegram.Update, context: CallbackContext):
     current_text = update.effective_message.text
     
     if ANSWER in data:
+        uuid = data[9:]
+        question = Question.objects.get(uuid=uuid)
         context.bot.send_message(
             chat_id=chat_id,
-            text=data
+            text=f'Введите ответ на вопрос от пользователя {question.guest}. Для того что бы ваш ответ был зарегистрирован и отправлен пользователю задавшему вопрос начните ответ со слова "+Ответ+"',
         )
+        context.user_data['queston_uuid'] = question.uuid
+    
+    if IGNORE in data:
+        uuid = data[7:]
+        question = Question.objects.get(uuid=uuid)
+        question.processed = True
+        question.save()
+        context.bot.send_message(
+            chat_id=chat_id,
+            text='Вопрос {} оставлен без ответа и убран из списка вопросов.'.format(uuid)
+            # text=f'{uuid}'
+        )
+
+
+def speaker_answer_handler(update: telegram.Update, context: CallbackContext):
+    text = update.message.text
+    uuid = context.user_data['queston_uuid']
+
+    question = Question.objects.get(uuid=uuid)
+    question.answer = text
+    question.processed = True
+    question.save()
+
+    guest = question.guest.telegram_id
+
+    context.bot.send_message(
+        chat_id=guest,
+        text=f'Спикер ответил на ваш вопрос {uuid}: \n\n\n{text}'
+    )
+
+    update.message.reply_text(
+        text=f'Ответ на вопрос: {uuid} отправлен пользователю'
+    )
 
 
 def message_handler(update: telegram.Update, context: CallbackContext):
@@ -139,6 +194,10 @@ def message_handler(update: telegram.Update, context: CallbackContext):
     text = update.message.text
     if text == QUESTIONS_BUTTON:
         return button_questions_handler(update=update, context=context)
+    
+    if '+Ответ+' in text:
+        return speaker_answer_handler(update=update, context=context)
+
     reply_markup = ReplyKeyboardMarkup(
         keyboard=[
             [
@@ -159,7 +218,8 @@ def main():
     tg_bot_token = os.getenv('TG_BOT_TOKEN')
 
     start_handler = CommandHandler('start', start)
-    answer_button_handler = CallbackQueryHandler(callback=button_answer_handler, pattern=ANSWER)
+    # answer_button_handler = CallbackQueryHandler(callback=button_answer_handler, pattern=ANSWER)
+    answer_button_handler = CallbackQueryHandler(callback=button_answer_handler)
     schedule_handler = CommandHandler('schedule', get_schedule)
 
     updater = Updater(token=tg_bot_token, use_context=True)
