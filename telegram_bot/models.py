@@ -161,7 +161,7 @@ class Question(models.Model):
         on_delete=models.PROTECT
     )
 
-    question = models.TextField('Question')
+    question = models.TextField('Question', blank=True)
     answer = models.TextField('Answer', blank=True)
 
     # Оставляет право не отвечать на вопрос если он не по делу

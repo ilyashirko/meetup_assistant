@@ -67,6 +67,46 @@ def get_schedule(update, context):
             text=f'{event.title}\n{event.description}\n{lectures_schedule}'
         )
 
+
+def ask_question(update, context):
+    curr_date_time = timezone.localtime()
+    curr_lectures = Lecture.objects.filter(start__lte=curr_date_time, end__gt=curr_date_time)
+    if curr_lectures:
+        speakers = [
+            {'name': f'{lecture.speaker.first_name} {lecture.speaker.last_name}', 'uuid':lecture.speaker.uuid}
+            for lecture in curr_lectures
+        ]
+        keyboard = [
+            [
+                InlineKeyboardButton(speaker['name'], callback_data=speaker['uuid'])
+                for speaker in speakers
+            ]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        update.message.reply_text(
+            text='Кому задать вопрос?',
+            reply_markup=reply_markup
+        )
+    else:
+        context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text='На данный момент лекции не идут'
+        )
+
+
+def send_question(update, context):
+    speaker = Person.objects.get(uuid=update.callback_query.data)
+    user = Person.objects.get(telegram_id=update.callback_query.message.chat.id)
+
+    user_question = Question.objects.create(speaker=speaker, guest=user)
+    os.environ.setdefault(f'{update.effective_chat.id}', '')
+    os.environ[f'{update.effective_chat.id}'] = f'ask_question:{user_question.uuid}'
+
+    context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text='Ваш вопрос?'
+    )
+
 def button_questions_handler(update: telegram.Update, context: CallbackContext):
     user = context.user_data['chat_id']
 
@@ -172,6 +212,12 @@ def speaker_answer_handler(update: telegram.Update, context: CallbackContext):
 
 
 def message_handler(update: telegram.Update, context: CallbackContext):
+    # Записать вопрос в базу данных
+    if 'ask_question' in os.getenv(f'{update.effective_chat.id}'):
+        _, question_uuid = os.getenv(f'{update.effective_chat.id}').split(':')
+        question = Question.objects.get(uuid=question_uuid)
+        question.question = update.message.text
+        question.save()
 
     # ДОНАТ
     print(os.getenv(f'{update.effective_chat.id}'))
@@ -217,11 +263,16 @@ def main():
     # answer_button_handler = CallbackQueryHandler(callback=button_answer_handler, pattern=ANSWER)
     answer_button_handler = CallbackQueryHandler(callback=button_answer_handler)
     schedule_handler = CommandHandler('schedule', get_schedule)
+    ask_question_handler = CommandHandler('ask', ask_question)
+    send_question_handler = CallbackQueryHandler(callback=send_question)
+
 
     updater = Updater(token=tg_bot_token, use_context=True)
     
     updater.dispatcher.add_handler(start_handler)
     updater.dispatcher.add_handler(schedule_handler)
+    updater.dispatcher.add_handler(ask_question_handler)
+    updater.dispatcher.add_handler(send_question_handler)
     
     updater.dispatcher.add_handler(answer_button_handler)
     
