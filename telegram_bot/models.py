@@ -165,7 +165,7 @@ class Question(models.Model):
     answer = models.TextField('Answer', blank=True)
 
     # Оставляет право не отвечать на вопрос если он не по делу
-    processed = models.BooleanField('Processed', default=True)
+    processed = models.BooleanField('Processed', default=False)
 
     def __str__(self):
         return f'{self.question[:100]}{"..." if len(self.question) < 100 else ""}'
