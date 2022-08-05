@@ -68,7 +68,7 @@ def button_questions_handler(update: telegram.Update, context: CallbackContext):
     user = update.message.chat_id
 
     questions_text = []
-    questions = Question.objects.filter(speaker__telegram_id=user)
+    questions = Question.objects.filter(speaker__telegram_id=user, processed=False)
 
     for question in questions:
         serialize_question = {
@@ -123,6 +123,7 @@ def speaker_answer_handler(update: telegram.Update, context: CallbackContext):
 
     question = Question.objects.get(uuid=uuid)
     question.answer = text
+    question.processed = True
     question.save()
 
     guest = question.guest.telegram_id
