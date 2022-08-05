@@ -33,6 +33,11 @@ class Person(models.Model):
             f'{self.first_name if self.first_name else self.telegram_id}'
         )
 
+    def is_speaker(self, event):
+        lectures = Lecture.objects.filter(event=event)
+        speakers = [lecture.speaker for lecture in lectures]
+        return self in speakers
+
 
 class Event(models.Model):
     uuid = models.CharField(
