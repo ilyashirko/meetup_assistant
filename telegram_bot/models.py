@@ -164,4 +164,34 @@ class Question(models.Model):
 
     def __str__(self):
         return f'{self.question[:100]}{"..." if len(self.question) < 100 else ""}'
-    
+
+
+
+
+class Donate(models.Model):
+    payment_id = models.CharField(
+        "id",
+        unique=True,
+        default=uuid.uuid1,
+        max_length=36,
+        validators=[MinLengthValidator(36)],
+        primary_key=True,
+        editable=False
+    )
+    event = models.ForeignKey(
+        'Event',
+        verbose_name='Event',
+        related_name='donations',
+        on_delete=models.PROTECT,
+        blank=True
+    )
+    user = models.ForeignKey(
+        'Person',
+        verbose_name='Guest',
+        related_name='donations',
+        on_delete=models.PROTECT
+    )
+    summ = models.IntegerField('Amount', null=True)
+    confirmed = models.BooleanField('Payment confirmed', default=False)
+
+        
