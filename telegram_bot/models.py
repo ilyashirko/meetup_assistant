@@ -208,3 +208,4 @@ class AdminMessage(models.Model):
         related_name='got_admin_messages',
         blank=True
     )
+    was_sent = models.BooleanField('Отправлено', default=False)
