@@ -289,11 +289,6 @@ def main():
     updater.dispatcher.add_handler(PreCheckoutQueryHandler(confirm_payment))
     updater.dispatcher.add_handler(MessageHandler(filters=Filters.all, callback=message_handler))
 
-    import time
-    while True:
-        print('FUCK')
-        time.sleep(3)
-        
     updater.start_polling()
     updater.idle()
 
