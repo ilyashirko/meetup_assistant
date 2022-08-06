@@ -116,7 +116,8 @@ def ask_question(update, context):
             ]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        update.message.reply_text(
+        context.bot.send_message(
+            chat_id=update.effective_chat.id,
             text='Кому задать вопрос?',
             reply_markup=reply_markup
         )
@@ -131,7 +132,7 @@ def make_question_instance(update, context):
     speaker = Person.objects.get(uuid=update.callback_query.data)
     user = Person.objects.get(telegram_id=update.callback_query.message.chat.id)
 
-    user_question = Question.objects.get_or_create(speaker=speaker, guest=user, question='')
+    user_question = Question.objects.get_or_create(speaker=speaker, guest=user, question='')[0]
     os.environ.setdefault(f'{update.effective_chat.id}', '')
     os.environ[f'{update.effective_chat.id}'] = f'ask_question:{user_question.uuid}'
 
@@ -252,6 +253,10 @@ def message_handler(update: telegram.Update, context: CallbackContext):
         question.question = update.message.text
         question.save()
         os.environ.pop(f'{update.effective_chat.id}')
+        context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text='Ваш вопрос отправлен спикеру'
+        )
 
     # ДОНАТ
     print(os.getenv(f'{update.effective_chat.id}'))
@@ -295,8 +300,7 @@ def main():
 
     # answer_button_handler = CallbackQueryHandler(callback=button_answer_handler, pattern=ANSWER)
     #answer_button_handler = CallbackQueryHandler(callback=button_answer_handler)
-    #ask_question_handler = CommandHandler('ask', ask_question)
-    #make_question_handler = CallbackQueryHandler(callback=make_question_instance)
+    make_question_handler = CallbackQueryHandler(callback=make_question_instance)
 
 
     updater = Updater(token=tg_bot_token, use_context=True)
@@ -307,7 +311,8 @@ def main():
         ],
         states={
             BEGGINNING_STATE:[
-                CallbackQueryHandler(get_schedule, pattern=f'^{SCHEDULE}$')
+                CallbackQueryHandler(get_schedule, pattern=f'^{SCHEDULE}$'),
+                CallbackQueryHandler(ask_question, pattern=f'^{ASK_QUESTION}$')
             ]
         },
         fallbacks=[
@@ -315,8 +320,7 @@ def main():
         ]
     )
     updater.dispatcher.add_handler(conv_handler)
-    #updater.dispatcher.add_handler(ask_question_handler)
-    #updater.dispatcher.add_handler(make_question_handler)
+    updater.dispatcher.add_handler(make_question_handler)
 
 
     #updater.dispatcher.add_handler(answer_button_handler)
