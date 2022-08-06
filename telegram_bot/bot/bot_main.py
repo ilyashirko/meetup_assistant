@@ -7,7 +7,8 @@ from dotenv import load_dotenv
 from telegram import (InlineKeyboardButton, InlineKeyboardMarkup)
 from telegram.ext import (CallbackContext, CallbackQueryHandler,
                           CommandHandler, MessageHandler,
-                          PreCheckoutQueryHandler, Updater)
+                          PreCheckoutQueryHandler, Updater,
+                          ConversationHandler)
 from telegram.ext.filters import Filters
 from telegram_bot.bot.payment import (cancel_payments, confirm_payment,
                                       get_donation_amount, make_payment)
@@ -16,7 +17,7 @@ from telegram_bot.models import Event, Lecture, Person, Question
 QUESTIONS_BUTTON = 'Посмотреть вопросы'
 ANSWER = 'Ответить'
 IGNORE = 'ignore'
-FIRST, SECOND = range(2)
+BEGGINNING_STATE, SECOND = range(2)
 SCHEDULE, NETWORKING, ASK_QUESTION, DONATE = range(4)
 
 
@@ -56,7 +57,8 @@ def start(update, context):
         chat_id=update.effective_chat.id,
         text='Здравствуйте, вы зарегистрированы на событие.'
     )
-    Person.objects.get_or_create(telegram_id=user_telegram_id)
+    curr_person = Person.objects.get_or_create(telegram_id=user_telegram_id)[0]
+    curr_date = timezone.localtime()
 
     start_menu_button_info = {
         "Узнать расписание": str(SCHEDULE),
@@ -65,10 +67,16 @@ def start(update, context):
         "Задонатить": 'make_donation'
     }
 
-    reply_markup = InlineKeyboardMarkup(get_keyboard())
+    curr_event = Event.objects.get(start__lt=curr_date, finish__gt=curr_date)
+    if curr_person.is_speaker(curr_event):
+        start_menu_button_info[QUESTIONS_BUTTON] = QUESTIONS_BUTTON
+
+    reply_markup = InlineKeyboardMarkup(build_menu(start_menu_button_info))
     update.message.reply_text(
         text="Чем хотите заняться?", reply_markup=reply_markup
     )
+
+    return BEGGINNING_STATE
 
 
 def get_schedule(update, context):
@@ -285,23 +293,33 @@ def main():
     load_dotenv()
     tg_bot_token = os.getenv('TG_BOT_TOKEN')
 
-    start_handler = CommandHandler('start', start)
     # answer_button_handler = CallbackQueryHandler(callback=button_answer_handler, pattern=ANSWER)
-    answer_button_handler = CallbackQueryHandler(callback=button_answer_handler)
-    schedule_handler = CommandHandler('schedule', get_schedule)
-    ask_question_handler = CommandHandler('ask', ask_question)
-    make_question_handler = CallbackQueryHandler(callback=make_question_instance)
+    #answer_button_handler = CallbackQueryHandler(callback=button_answer_handler)
+    #ask_question_handler = CommandHandler('ask', ask_question)
+    #make_question_handler = CallbackQueryHandler(callback=make_question_instance)
 
 
     updater = Updater(token=tg_bot_token, use_context=True)
-    
-    updater.dispatcher.add_handler(start_handler)
-    updater.dispatcher.add_handler(schedule_handler)
-    updater.dispatcher.add_handler(ask_question_handler)
-    updater.dispatcher.add_handler(make_question_handler)
-    
-    updater.dispatcher.add_handler(answer_button_handler)
-    
+
+    conv_handler = ConversationHandler(
+        entry_points=[
+            CommandHandler('start', start)
+        ],
+        states={
+            BEGGINNING_STATE:[
+                CallbackQueryHandler(get_schedule, pattern=f'^{SCHEDULE}$')
+            ]
+        },
+        fallbacks=[
+            CommandHandler('start', start)
+        ]
+    )
+    updater.dispatcher.add_handler(conv_handler)
+    #updater.dispatcher.add_handler(ask_question_handler)
+    #updater.dispatcher.add_handler(make_question_handler)
+
+
+    #updater.dispatcher.add_handler(answer_button_handler)
     updater.dispatcher.add_handler(CallbackQueryHandler(get_donation_amount, pattern='make_donation'))
     updater.dispatcher.add_handler(CallbackQueryHandler(cancel_payments, pattern='cancel_donation'))
     updater.dispatcher.add_handler(PreCheckoutQueryHandler(confirm_payment))
