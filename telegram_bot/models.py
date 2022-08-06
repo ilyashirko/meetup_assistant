@@ -199,4 +199,12 @@ class Donate(models.Model):
     summ = models.IntegerField('Amount', null=True)
     confirmed = models.BooleanField('Payment confirmed', default=False)
 
-        
+
+class AdminMessage(models.Model):
+    message = models.TextField('Message', max_length=3000) # max length because of Telegram API limits
+    users = models.ManyToManyField(
+        'Person',
+        verbose_name='Users (if blank, will send to everyone in database)',
+        related_name='got_admin_messages',
+        blank=True
+    )

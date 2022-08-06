@@ -1,12 +1,14 @@
+import os
 from django.contrib import admin
 
-from telegram_bot.models import Person, Event, Lecture, Question, Donate
+from telegram_bot.models import AdminMessage, Person, Event, Lecture, Question, Donate
 
 
 @admin.register(Person)
 class PersonAdmin(admin.ModelAdmin):
     list_display = ('first_name', 'last_name', 'telegram_id', 'phone_number', 'company')
     list_filter = ('company',)
+    list_select_related = ('lectures',)
 
 
 @admin.register(Event)
@@ -29,3 +31,16 @@ class QuestionAdmin(admin.ModelAdmin):
 @admin.register(Donate)
 class DonateAdmin(admin.ModelAdmin):
     list_display = ('payment_id', 'event', 'user', 'summ', 'confirmed')
+
+
+@admin.register(AdminMessage)
+class AdminMessageAdmin(admin.ModelAdmin):
+    
+    def send_message(self, request, queryset):
+        import requests
+        requests.get(f'https://api.telegram.org/bot{os.getenv("TG_BOT_TOKEN")}/sendMessage?chat_id=434137786&text={queryset}')
+    send_message.short_description = "Send message(-s)"
+
+    actions = [send_message]
+
+    

@@ -36,7 +36,6 @@ ALLOWED_HOSTS = env.list('ALLOWED_HOSTS')
 
 INSTALLED_APPS = [
     'telegram_bot',
-    'webpush',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -127,9 +126,3 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/4.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-WEBPUSH_SETTINGS = {
-    'VAPID_PUBLIC_KEY': env.str('VAPID_PUBLIC_KEY'),
-    'VAPID_PRIVATE_KEY': env.str('VAPID_PRIVATE_KEY'),
-    'VAPID_ADMIN_EMAIL': env.str('VAPID_ADMIN_EMAIL'),
-}
