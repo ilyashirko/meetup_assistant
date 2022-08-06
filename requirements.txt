@@ -7,3 +7,4 @@ flake8==5.0.3
 python-telegram-bot==13.13
 yookassa==2.3.2
 django-webpush==0.3.4
+requests==2.28.1
