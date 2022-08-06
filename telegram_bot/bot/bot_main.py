@@ -57,14 +57,21 @@ def get_schedule(update, context):
     curr_date=timezone.localtime()
     curr_events = Event.objects.filter(finish__gt=curr_date, start__lte=curr_date)
 
-    for event in curr_events:
-        lectures = event.lectures.all()
-        lectures_schedule = ''
-        for lecture in lectures:
-            lectures_schedule += f'{lecture.title}\nСпикер: {lecture.speaker}\nНачало: {lecture.start.time()}\nКонец: {lecture.end.time()}\n\n'
+    if curr_events:
+        for event in curr_events:
+            lectures = event.lectures.all()
+            lectures_schedule = ''
+            for lecture in lectures:
+                lectures_schedule += f'{lecture.title}\nСпикер: {lecture.speaker}\nНачало: {lecture.start.time()}\nКонец: {lecture.end.time()}\n\n'
+            context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text=f'{event.title}\n{event.description}\n{lectures_schedule}'
+            )
+
+    else:
         context.bot.send_message(
             chat_id=update.effective_chat.id,
-            text=f'{event.title}\n{event.description}\n{lectures_schedule}'
+            text='На данный момент мероприятий нет'
         )
 
 
@@ -94,7 +101,7 @@ def ask_question(update, context):
         )
 
 
-def send_question(update, context):
+def make_question_instance(update, context):
     speaker = Person.objects.get(uuid=update.callback_query.data)
     user = Person.objects.get(telegram_id=update.callback_query.message.chat.id)
 
@@ -265,7 +272,7 @@ def main():
     answer_button_handler = CallbackQueryHandler(callback=button_answer_handler)
     schedule_handler = CommandHandler('schedule', get_schedule)
     ask_question_handler = CommandHandler('ask', ask_question)
-    send_question_handler = CallbackQueryHandler(callback=send_question)
+    make_question_handler = CallbackQueryHandler(callback=make_question_instance)
 
 
     updater = Updater(token=tg_bot_token, use_context=True)
@@ -273,7 +280,7 @@ def main():
     updater.dispatcher.add_handler(start_handler)
     updater.dispatcher.add_handler(schedule_handler)
     updater.dispatcher.add_handler(ask_question_handler)
-    updater.dispatcher.add_handler(send_question_handler)
+    updater.dispatcher.add_handler(make_question_handler)
     
     updater.dispatcher.add_handler(answer_button_handler)
     
