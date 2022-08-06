@@ -17,7 +17,7 @@ QUESTIONS_BUTTON = 'Посмотреть вопросы'
 ANSWER = 'Ответить'
 IGNORE = 'ignore'
 FIRST, SECOND = range(2)
-SCHEDULE, NETWORKING, MY_QUESTION, DONATE = range(4)
+SCHEDULE, NETWORKING, ASK_QUESTION, DONATE = range(4)
 
 
 def get_keyboard():
@@ -27,7 +27,7 @@ def get_keyboard():
             InlineKeyboardButton("Познакомиться с кем нибудь", callback_data=str(NETWORKING))
         ],
         [
-            InlineKeyboardButton("Задать вопрос спикеру", callback_data=str(MY_QUESTION)),
+            InlineKeyboardButton("Задать вопрос спикеру", callback_data=str(ASK_QUESTION)),
             InlineKeyboardButton("Задонатить", callback_data='make_donation')
         ],
         [
@@ -38,6 +38,17 @@ def get_keyboard():
     return keyboard
 
 
+def build_menu(menu_buttons):
+    n_cols = 2
+    buttons = [
+        InlineKeyboardButton(button_name, callback_data=button_callback)
+        for button_name, button_callback in menu_buttons.items()
+    ]
+    menu = [buttons[i:i + n_cols] for i in range(0, len(buttons), n_cols)]
+
+    return menu
+
+
 def start(update, context):
 
     user_telegram_id = update.message.from_user.id
@@ -46,6 +57,13 @@ def start(update, context):
         text='Здравствуйте, вы зарегистрированы на событие.'
     )
     Person.objects.get_or_create(telegram_id=user_telegram_id)
+
+    start_menu_button_info = {
+        "Узнать расписание": str(SCHEDULE),
+        "Познакомиться с кем нибудь": str(NETWORKING),
+        "Задать вопрос спикеру": str(ASK_QUESTION),
+        "Задонатить": 'make_donation'
+    }
 
     reply_markup = InlineKeyboardMarkup(get_keyboard())
     update.message.reply_text(
