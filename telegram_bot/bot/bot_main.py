@@ -105,7 +105,7 @@ def make_question_instance(update, context):
     speaker = Person.objects.get(uuid=update.callback_query.data)
     user = Person.objects.get(telegram_id=update.callback_query.message.chat.id)
 
-    user_question = Question.objects.create(speaker=speaker, guest=user)
+    user_question = Question.objects.get_or_create(speaker=speaker, guest=user, question='')
     os.environ.setdefault(f'{update.effective_chat.id}', '')
     os.environ[f'{update.effective_chat.id}'] = f'ask_question:{user_question.uuid}'
 
