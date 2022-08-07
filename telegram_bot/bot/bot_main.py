@@ -294,10 +294,11 @@ def message_handler(update: telegram.Update, context: CallbackContext):
     text = update.message.text
     if text == QUESTIONS_BUTTON:
         return button_questions_handler(update=update, context=context)
-    
-    if '+Ответ+' in text:
-        return speaker_answer_handler(update=update, context=context)
-
+    try:
+        if '+Ответ+' in text:
+            return speaker_answer_handler(update=update, context=context)
+    except TypeError:
+        pass
 
 def main():
     load_dotenv()
