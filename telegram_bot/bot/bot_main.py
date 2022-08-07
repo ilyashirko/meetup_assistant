@@ -17,7 +17,7 @@ from telegram_bot.models import Event, Lecture, Person, Question
 QUESTIONS_BUTTON = 'Посмотреть вопросы'
 ANSWER = 'Ответить'
 IGNORE = 'ignore'
-BEGGINNING_STATE, SECOND = range(2)
+BEGGINNING_STATE, MAKE_NEW_QUESTION = range(2)
 SCHEDULE, NETWORKING, ASK_QUESTION, DONATE = range(4)
 
 
@@ -69,7 +69,7 @@ def start(update, context):
 
     curr_event = Event.objects.get(start__lt=curr_date, finish__gt=curr_date)
     if curr_person.is_speaker(curr_event):
-        start_menu_button_info[QUESTIONS_BUTTON] = ANSWER
+        start_menu_button_info[QUESTIONS_BUTTON] = QUESTIONS_BUTTON
 
     reply_markup = InlineKeyboardMarkup(build_menu(start_menu_button_info))
     update.message.reply_text(
@@ -126,6 +126,8 @@ def ask_question(update, context):
             chat_id=update.effective_chat.id,
             text='На данный момент лекции не идут'
         )
+
+    return MAKE_NEW_QUESTION
 
 
 def make_question_instance(update, context):
@@ -191,6 +193,7 @@ def button_questions_handler(update: telegram.Update, context: CallbackContext):
 def button_answer_handler(update: telegram.Update, context: CallbackContext):
     query = update.callback_query
     data = query.data
+    print(data)
 
     chat_id = update.effective_message.chat_id
     current_text = update.effective_message.text
@@ -303,8 +306,6 @@ def main():
 
     updater = Updater(token=tg_bot_token, use_context=True)
 
-    make_question_handler = CallbackQueryHandler(callback=make_question_instance)
-
     conv_handler = ConversationHandler(
         entry_points=[
             CommandHandler('start', start)
@@ -314,15 +315,17 @@ def main():
                 CallbackQueryHandler(get_schedule, pattern=f'^{SCHEDULE}$'),
                 CallbackQueryHandler(ask_question, pattern=f'^{ASK_QUESTION}$'),
                 CallbackQueryHandler(get_donation_amount, pattern='make_donation'),
-                CallbackQueryHandler(button_answer_handler, pattern=ANSWER)
+                CallbackQueryHandler(button_answer_handler, pattern=QUESTIONS_BUTTON)
             ],
+            MAKE_NEW_QUESTION:[
+                CallbackQueryHandler(callback=make_question_instance)
+            ]
         },
         fallbacks=[
             CommandHandler('start', start)
         ]
     )
     updater.dispatcher.add_handler(conv_handler)
-    updater.dispatcher.add_handler(make_question_handler)
 
 
     #updater.dispatcher.add_handler(answer_button_handler)
