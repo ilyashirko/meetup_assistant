@@ -69,7 +69,7 @@ def start(update, context):
 
     curr_event = Event.objects.get(start__lt=curr_date, finish__gt=curr_date)
     if curr_person.is_speaker(curr_event):
-        start_menu_button_info[QUESTIONS_BUTTON] = QUESTIONS_BUTTON
+        start_menu_button_info[QUESTIONS_BUTTON] = ANSWER
 
     reply_markup = InlineKeyboardMarkup(build_menu(start_menu_button_info))
     update.message.reply_text(
@@ -300,10 +300,10 @@ def main():
 
     # answer_button_handler = CallbackQueryHandler(callback=button_answer_handler, pattern=ANSWER)
     #answer_button_handler = CallbackQueryHandler(callback=button_answer_handler)
-    make_question_handler = CallbackQueryHandler(callback=make_question_instance)
-
 
     updater = Updater(token=tg_bot_token, use_context=True)
+
+    make_question_handler = CallbackQueryHandler(callback=make_question_instance)
 
     conv_handler = ConversationHandler(
         entry_points=[
@@ -312,8 +312,10 @@ def main():
         states={
             BEGGINNING_STATE:[
                 CallbackQueryHandler(get_schedule, pattern=f'^{SCHEDULE}$'),
-                CallbackQueryHandler(ask_question, pattern=f'^{ASK_QUESTION}$')
-            ]
+                CallbackQueryHandler(ask_question, pattern=f'^{ASK_QUESTION}$'),
+                CallbackQueryHandler(get_donation_amount, pattern='make_donation'),
+                CallbackQueryHandler(button_answer_handler, pattern=ANSWER)
+            ],
         },
         fallbacks=[
             CommandHandler('start', start)
