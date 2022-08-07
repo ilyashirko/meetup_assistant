@@ -341,7 +341,7 @@ def main():
     updater.dispatcher.add_handler(CallbackQueryHandler(get_donation_amount, pattern='make_donation'))
     updater.dispatcher.add_handler(CallbackQueryHandler(cancel_payments, pattern='cancel_donation'))
     updater.dispatcher.add_handler(PreCheckoutQueryHandler(confirm_payment))
-    #updater.dispatcher.add_handler(MessageHandler(filters=Filters.all, callback=message_handler))
+    updater.dispatcher.add_handler(MessageHandler(filters=Filters.all, callback=message_handler))
 
     updater.start_polling()
     updater.idle()
