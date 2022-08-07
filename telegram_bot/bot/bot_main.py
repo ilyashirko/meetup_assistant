@@ -17,7 +17,7 @@ from telegram_bot.models import Event, Lecture, Person, Question
 QUESTIONS_BUTTON = 'Посмотреть вопросы'
 ANSWER = 'Ответить'
 IGNORE = 'ignore'
-BEGGINNING_STATE, MAKE_NEW_QUESTION = range(2)
+BEGGINNING_STATE, MAKE_NEW_QUESTION, ANSWER_QUESTIONS = range(3)
 SCHEDULE, NETWORKING, ASK_QUESTION, DONATE = range(4)
 
 
@@ -188,6 +188,7 @@ def button_questions_handler(update: telegram.Update, context: CallbackContext):
                     ]
                 )
             )
+        return ANSWER_QUESTIONS
 
 
 def button_answer_handler(update: telegram.Update, context: CallbackContext):
@@ -250,16 +251,19 @@ def speaker_answer_handler(update: telegram.Update, context: CallbackContext):
 
 def message_handler(update: telegram.Update, context: CallbackContext):
     # Записать вопрос в базу данных
-    if 'ask_question' in os.getenv(f'{update.effective_chat.id}'):
-        _, question_uuid = os.getenv(f'{update.effective_chat.id}').split(':')
-        question = Question.objects.get(uuid=question_uuid)
-        question.question = update.message.text
-        question.save()
-        os.environ.pop(f'{update.effective_chat.id}')
-        context.bot.send_message(
-            chat_id=update.effective_chat.id,
-            text='Ваш вопрос отправлен спикеру'
-        )
+    try:
+        if 'ask_question' in os.getenv(f'{update.effective_chat.id}'):
+            _, question_uuid = os.getenv(f'{update.effective_chat.id}').split(':')
+            question = Question.objects.get(uuid=question_uuid)
+            question.question = update.message.text
+            question.save()
+            os.environ.pop(f'{update.effective_chat.id}')
+            context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text='Ваш вопрос отправлен спикеру'
+            )
+    except TypeError:
+        pass
 
     # ДОНАТ
     print(os.getenv(f'{update.effective_chat.id}'))
@@ -318,7 +322,12 @@ def main():
                 CallbackQueryHandler(button_answer_handler, pattern=QUESTIONS_BUTTON)
             ],
             MAKE_NEW_QUESTION:[
-                CallbackQueryHandler(callback=make_question_instance)
+                CallbackQueryHandler(callback=make_question_instance),
+                MessageHandler(filters=Filters.all, callback=message_handler)
+            ],
+            ANSWER_QUESTIONS:[
+                CallbackQueryHandler(button_answer_handler),
+                MessageHandler(filters=Filters.all, callback=message_handler)
             ]
         },
         fallbacks=[
@@ -332,7 +341,7 @@ def main():
     updater.dispatcher.add_handler(CallbackQueryHandler(get_donation_amount, pattern='make_donation'))
     updater.dispatcher.add_handler(CallbackQueryHandler(cancel_payments, pattern='cancel_donation'))
     updater.dispatcher.add_handler(PreCheckoutQueryHandler(confirm_payment))
-    updater.dispatcher.add_handler(MessageHandler(filters=Filters.all, callback=message_handler))
+    #updater.dispatcher.add_handler(MessageHandler(filters=Filters.all, callback=message_handler))
 
     updater.start_polling()
     updater.idle()
