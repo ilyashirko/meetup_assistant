@@ -242,10 +242,8 @@ def speaker_answer_handler(update: telegram.Update, context: CallbackContext):
         text=f'Спикер ответил на ваш вопрос {uuid}: \n\n\n{text}'
     )
 
-    reply_markup = InlineKeyboardMarkup(get_keyboard())
     update.message.reply_text(
-        text=f'Ответ на вопрос: {uuid} отправлен пользователю',
-        reply_markup=reply_markup
+        text=f'Ответ на вопрос: {uuid} отправлен пользователю'
     )
 
 
