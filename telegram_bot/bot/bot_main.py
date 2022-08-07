@@ -4,7 +4,7 @@ from textwrap import dedent
 import telegram
 from django.utils import timezone
 from dotenv import load_dotenv
-from telegram import (InlineKeyboardButton, InlineKeyboardMarkup)
+from telegram import (InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup)
 from telegram.ext import (CallbackContext, CallbackQueryHandler,
                           CommandHandler, MessageHandler,
                           PreCheckoutQueryHandler, Updater,
@@ -18,7 +18,8 @@ QUESTIONS_BUTTON = 'Посмотреть вопросы'
 ANSWER = 'Ответить'
 IGNORE = 'ignore'
 BEGGINNING_STATE, MAKE_NEW_QUESTION, ANSWER_QUESTIONS = range(3)
-SCHEDULE, NETWORKING, ASK_QUESTION, DONATE = range(4)
+LASTNAME, FIRSTNAME, PHONE, EMAIL, COMPANY = range(3, 8)
+SCHEDULE, NETWORKING, ASK_QUESTION, DONATE = range(8, 12)
 
 
 def get_keyboard():
@@ -247,6 +248,104 @@ def speaker_answer_handler(update: telegram.Update, context: CallbackContext):
     )
 
 
+def get_last_name(update, context):
+
+    chat_id = update.effective_chat.id
+    text = (
+        'Для знакомства заполните свой профиль\n'
+        'Ваша Фамилия:'
+    )
+
+    context.bot.send_message(
+        chat_id=chat_id,
+        text=text
+    )
+
+    return LASTNAME
+
+
+def get_first_name(update, context):
+    chat_id = update.effective_chat.id
+    context.user_data['lastname'] = update.message.text
+
+    text = (
+        'Ваше имя:'
+    )
+
+    context.bot.send_message(
+        chat_id=chat_id,
+        text=text
+    )
+
+    return FIRSTNAME
+
+
+def get_email(update, context):
+    chat_id = update.effective_chat.id
+    context.user_data['firstname'] = update.message.text
+
+    text = (
+        'Ваш email:'
+    )
+
+    context.bot.send_message(
+        chat_id=chat_id,
+        text=text
+    )
+
+    return EMAIL
+
+
+def get_company_name(update, context):
+    chat_id = update.effective_chat.id
+    context.user_data['email'] = update.message.text
+
+    text = (
+        'В какой компании работаете?'
+    )
+
+    context.bot.send_message(
+        chat_id=chat_id,
+        text=text
+    )
+
+    return COMPANY
+
+
+def get_phone(update, context):
+    chat_id = update.effective_chat.id
+    context.user_data['company'] = update.message.text
+
+    text = (
+        'Поделитесь своим номером телефона, пожалуйста'
+    )
+
+    reply_markup = ReplyKeyboardMarkup([[
+        KeyboardButton(text='Поделиться контатной информацией', request_contact=True)
+    ]], one_time_keyboard=True)
+
+    context.bot.send_message(
+        chat_id=chat_id,
+        text=text,
+        reply_markup=reply_markup
+    )
+
+    return PHONE
+
+
+def finish_profile(update, context):
+    curr_user = Person.objects.get(telegram_id=update.effective_chat.id)
+    curr_user.first_name = context.user_data['firstname']
+    curr_user.last_name = context.user_data['lastname']
+    curr_user.email = context.user_data['email']
+    curr_user.company = context.user_data['company']
+    curr_user.phone_number = update.message.contact.phone_number
+    curr_user.save()
+    print('Регистрация завершена')
+
+    return ConversationHandler.END
+
+
 def message_handler(update: telegram.Update, context: CallbackContext):
     # Записать вопрос в базу данных
     try:
@@ -309,7 +408,7 @@ def main():
 
     updater = Updater(token=tg_bot_token, use_context=True)
 
-    conv_handler = ConversationHandler(
+    main_conv_handler = ConversationHandler(
         entry_points=[
             CommandHandler('start', start)
         ],
@@ -318,7 +417,7 @@ def main():
                 CallbackQueryHandler(get_schedule, pattern=f'^{SCHEDULE}$'),
                 CallbackQueryHandler(ask_question, pattern=f'^{ASK_QUESTION}$'),
                 CallbackQueryHandler(get_donation_amount, pattern='make_donation'),
-                CallbackQueryHandler(button_answer_handler, pattern=QUESTIONS_BUTTON)
+                CallbackQueryHandler(button_answer_handler, pattern=QUESTIONS_BUTTON),
             ],
             MAKE_NEW_QUESTION:[
                 CallbackQueryHandler(callback=make_question_instance),
@@ -333,7 +432,23 @@ def main():
             CommandHandler('start', start)
         ]
     )
-    updater.dispatcher.add_handler(conv_handler)
+
+    profile_filler_handler = ConversationHandler(
+        entry_points=[
+            CallbackQueryHandler(get_last_name, pattern=f'^{NETWORKING}$')
+        ],
+        states={
+            LASTNAME:[MessageHandler(filters=Filters.text, callback=get_first_name)],
+            FIRSTNAME:[MessageHandler(filters=Filters.text, callback=get_email)],
+            EMAIL:[MessageHandler(filters=Filters.text, callback=get_company_name)],
+            COMPANY:[MessageHandler(filters=Filters.text, callback=get_phone)],
+            PHONE:[MessageHandler(filters=Filters.contact, callback=finish_profile)]
+        },
+        fallbacks=[CommandHandler('start', start)],
+        map_to_parent=BEGGINNING_STATE
+    )
+    updater.dispatcher.add_handler(main_conv_handler)
+    updater.dispatcher.add_handler(profile_filler_handler)
 
 
     #updater.dispatcher.add_handler(answer_button_handler)
