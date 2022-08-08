@@ -15,7 +15,7 @@ def get_donation_amount(update, context):
 
     user = Person.objects.get(telegram_id=update.effective_chat.id)
 
-    payment, _ = Donate.objects.get_or_create(event=event, user=user, summ=None)
+    payment, _ = Donate.objects.get_or_create(event=event, user=user, summ=None, paid_at=datetime.now())
     
     os.environ.setdefault(f'{update.effective_chat.id}', '')
     os.environ[f'{update.effective_chat.id}'] = f'donation:{payment.payment_id}'
