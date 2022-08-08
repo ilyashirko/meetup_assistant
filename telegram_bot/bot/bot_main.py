@@ -5,7 +5,14 @@ import telegram
 import requests
 from django.utils import timezone
 from dotenv import load_dotenv
-from telegram import (InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup,ReplyKeyboardRemove)
+from telegram import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    KeyboardButton,
+    ReplyKeyboardMarkup,
+    ReplyKeyboardRemove,
+    Contact
+)
 from telegram.ext import (CallbackContext, CallbackQueryHandler,
                           CommandHandler, MessageHandler,
                           PreCheckoutQueryHandler, Updater,
@@ -285,9 +292,16 @@ def show_networking_possibilities(update, context):
 
 
 def forward_message_to_guest(update, context):
-    context.bot.send_message(
+    target_person = Person.objects.get(telegram_id=update.callback_query.data.split(':')[1])
+    networking_contact=Contact(
+        phone_number=target_person.phone_number,
+        first_name=target_person.first_name,
+        last_name=target_person.last_name,
+        user_id=target_person.telegram_id
+    )
+    context.bot.send_contact(
         chat_id=update.effective_chat.id,
-        text=f'{update.callback_query.data}'
+        contact=networking_contact
     )
 
 
@@ -409,6 +423,7 @@ def message_handler(update: telegram.Update, context: CallbackContext):
                 chat_id=update.effective_chat.id,
                 text='Ваш вопрос отправлен спикеру'
             )
+            start(update, context)
     except TypeError:
         pass
 
@@ -515,7 +530,6 @@ def main():
     )
     updater.dispatcher.add_handler(main_conv_handler)
     updater.dispatcher.add_handler(profile_filler_handler)
-
     updater.dispatcher.add_handler(PreCheckoutQueryHandler(confirm_payment))
     updater.dispatcher.add_handler(MessageHandler(filters=Filters.all, callback=message_handler))
 
