@@ -1,7 +1,6 @@
 import os
 
 from telegram import LabeledPrice
-from telegram_bot.bot.bot_main import get_keyboard
 from telegram_bot.models import Donate, Event, Person
 
 
