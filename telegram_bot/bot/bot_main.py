@@ -377,7 +377,7 @@ def finish_profile(update, context):
     curr_user.save()
     print('Регистрация завершена')
 
-    return ConversationHandler.END
+    return start_networking(update, context)
 
 
 def message_handler(update: telegram.Update, context: CallbackContext):
@@ -452,6 +452,7 @@ def main():
                 CallbackQueryHandler(ask_question, pattern=f'^{ASK_QUESTION}$'),
                 CallbackQueryHandler(get_donation_amount, pattern='make_donation'),
                 CallbackQueryHandler(button_answer_handler, pattern=QUESTIONS_BUTTON),
+                CallbackQueryHandler(cancel_payments, pattern='cancel_donation')
             ],
             MAKE_NEW_QUESTION:[
                 CallbackQueryHandler(callback=make_question_instance),
@@ -480,15 +481,16 @@ def main():
             PHONE:[MessageHandler(filters=Filters.contact, callback=finish_profile)],
         },
         fallbacks=[CommandHandler('start', start)],
-        map_to_parent=BEGGINNING_STATE
+        map_to_parent=BEGGINNING_STATE,
+        allow_reentry=True
     )
     updater.dispatcher.add_handler(main_conv_handler)
     updater.dispatcher.add_handler(profile_filler_handler)
 
 
     #updater.dispatcher.add_handler(answer_button_handler)
-    updater.dispatcher.add_handler(CallbackQueryHandler(get_donation_amount, pattern='make_donation'))
-    updater.dispatcher.add_handler(CallbackQueryHandler(cancel_payments, pattern='cancel_donation'))
+    #updater.dispatcher.add_handler(CallbackQueryHandler(get_donation_amount, pattern='make_donation'))
+    #updater.dispatcher.add_handler(CallbackQueryHandler(cancel_payments, pattern='cancel_donation'))
     #updater.dispatcher.add_handler(CallbackQueryHandler(forward_message_to_guest, pattern=f'^{SEND_MESSAGE}$'))
     updater.dispatcher.add_handler(PreCheckoutQueryHandler(confirm_payment))
     updater.dispatcher.add_handler(MessageHandler(filters=Filters.all, callback=message_handler))
