@@ -356,7 +356,7 @@ def get_phone(update, context):
 
     reply_markup = ReplyKeyboardMarkup([[
         KeyboardButton(text='Поделиться контатной информацией', request_contact=True)
-    ]], one_time_keyboard=True)
+    ]], one_time_keyboard=True, resize_keyboard=True)
 
     context.bot.send_message(
         chat_id=chat_id,
@@ -451,6 +451,7 @@ def main():
                 CallbackQueryHandler(get_schedule, pattern=f'^{SCHEDULE}$'),
                 CallbackQueryHandler(ask_question, pattern=f'^{ASK_QUESTION}$'),
                 CallbackQueryHandler(get_donation_amount, pattern='make_donation'),
+                CallbackQueryHandler(cancel_payments, pattern='cancel_donation'),
                 CallbackQueryHandler(button_answer_handler, pattern=QUESTIONS_BUTTON),
             ],
             MAKE_NEW_QUESTION:[
@@ -487,8 +488,8 @@ def main():
 
 
     #updater.dispatcher.add_handler(answer_button_handler)
-    updater.dispatcher.add_handler(CallbackQueryHandler(get_donation_amount, pattern='make_donation'))
-    updater.dispatcher.add_handler(CallbackQueryHandler(cancel_payments, pattern='cancel_donation'))
+    #updater.dispatcher.add_handler(CallbackQueryHandler(get_donation_amount, pattern='make_donation'))
+    #updater.dispatcher.add_handler(CallbackQueryHandler(cancel_payments, pattern='cancel_donation'))
     #updater.dispatcher.add_handler(CallbackQueryHandler(forward_message_to_guest, pattern=f'^{SEND_MESSAGE}$'))
     updater.dispatcher.add_handler(PreCheckoutQueryHandler(confirm_payment))
     updater.dispatcher.add_handler(MessageHandler(filters=Filters.all, callback=message_handler))
