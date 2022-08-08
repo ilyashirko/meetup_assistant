@@ -125,13 +125,9 @@ def ask_question(update, context):
             {'name': f'{lecture.speaker.first_name} {lecture.speaker.last_name}', 'uuid':lecture.speaker.uuid}
             for lecture in curr_lectures
         ]
-        keyboard = [
-            [
-                InlineKeyboardButton(speaker['name'], callback_data=speaker['uuid'])
-                for speaker in speakers
-            ]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
+        keyboard = {speaker['name']:speaker['uuid'] for speaker in speakers}
+
+        reply_markup = InlineKeyboardMarkup(build_menu(keyboard))
         context.bot.send_message(
             chat_id=update.effective_chat.id,
             text='Кому задать вопрос?',
