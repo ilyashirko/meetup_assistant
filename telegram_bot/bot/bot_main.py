@@ -274,7 +274,7 @@ def show_networking_possibilities(update, context):
             chat_id=update.effective_chat.id,
             text=text,
             reply_markup=InlineKeyboardMarkup(
-                inline_keyboard=[[InlineKeyboardButton('Написать', callback_data=f'Telegram id:{contact.telegram_id}')]]
+                inline_keyboard=[[InlineKeyboardButton('Написать', callback_data=f'{contact.telegram_id}')]]
             )
         )
     context.bot.send_message(
@@ -292,7 +292,7 @@ def show_networking_possibilities(update, context):
 
 
 def forward_message_to_guest(update, context):
-    target_person = Person.objects.get(telegram_id=update.callback_query.data.split(':')[1])
+    target_person = Person.objects.get(telegram_id=update.callback_query.data)
     networking_contact=Contact(
         phone_number=target_person.phone_number,
         first_name=target_person.first_name,
