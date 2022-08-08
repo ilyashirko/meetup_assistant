@@ -424,7 +424,7 @@ def message_handler(update: telegram.Update, context: CallbackContext):
                 chat_id=update.effective_chat.id,
                 text='Ваш вопрос отправлен спикеру'
             )
-            start(update, context)
+            return start(update,context)
     except TypeError:
         pass
 
