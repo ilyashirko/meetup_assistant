@@ -303,6 +303,7 @@ def forward_message_to_guest(update, context):
         chat_id=update.effective_chat.id,
         contact=networking_contact
     )
+    start(update,context)
 
 
 def start_networking(update, context):
