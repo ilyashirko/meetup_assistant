@@ -10,6 +10,8 @@ from telegram.ext import (CallbackContext, CallbackQueryHandler,
                           PreCheckoutQueryHandler, Updater,
                           ConversationHandler)
 from telegram.ext.filters import Filters
+from telegram_bot_pagination import InlineKeyboardPaginator
+
 from telegram_bot.bot.payment import (cancel_payments, confirm_payment,
                                       get_donation_amount, make_payment)
 from telegram_bot.models import Event, Lecture, Person, Question
@@ -18,8 +20,8 @@ QUESTIONS_BUTTON = 'Посмотреть вопросы'
 ANSWER = 'Ответить'
 IGNORE = 'ignore'
 BEGGINNING_STATE, MAKE_NEW_QUESTION, ANSWER_QUESTIONS = range(3)
-LASTNAME, FIRSTNAME, PHONE, EMAIL, COMPANY = range(3, 8)
-SCHEDULE, NETWORKING, ASK_QUESTION, DONATE = range(8, 12)
+LASTNAME, FIRSTNAME, PHONE, EMAIL, COMPANY, SEND_MESSAGE = range(3, 9)
+SCHEDULE, NETWORKING, ASK_QUESTION, DONATE = range(9, 13)
 
 
 def get_keyboard():
@@ -195,7 +197,6 @@ def button_questions_handler(update: telegram.Update, context: CallbackContext):
 def button_answer_handler(update: telegram.Update, context: CallbackContext):
     query = update.callback_query
     data = query.data
-    print(data)
 
     chat_id = update.effective_message.chat_id
     current_text = update.effective_message.text
@@ -248,20 +249,47 @@ def speaker_answer_handler(update: telegram.Update, context: CallbackContext):
     )
 
 
-def get_last_name(update, context):
-
-    chat_id = update.effective_chat.id
-    text = (
-        'Для знакомства заполните свой профиль\n'
-        'Ваша Фамилия:'
-    )
-
+def show_networking_possibilities(update, context):
     context.bot.send_message(
-        chat_id=chat_id,
-        text=text
+        chat_id=update.effective_chat.id,
+        text='Выберите, с кем хотели бы пообщаться:'
+    )
+    available_contacts = Person.objects.exclude(first_name='')
+    for contact in available_contacts:
+        text = f'{contact.first_name} {contact.last_name}\n{contact.company}'
+        context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=text,
+            reply_markup=InlineKeyboardMarkup(
+                inline_keyboard=[[InlineKeyboardButton('Написать', callback_data=f'{contact.telegram_id}')]]
+            )
+        )
+
+
+def forward_message_to_guest(update, context):
+    context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text=f'{context.bot_data}'
     )
 
-    return LASTNAME
+
+def start_networking(update, context):
+    curr_user = Person.objects.get(telegram_id=update.effective_chat.id)
+    if curr_user.last_name:
+        show_networking_possibilities(update, context)
+    else:
+        chat_id = update.effective_chat.id
+        text = (
+            'Для знакомства заполните свой профиль\n'
+            'Ваша Фамилия:'
+        )
+
+        context.bot.send_message(
+            chat_id=chat_id,
+            text=text
+        )
+
+        return LASTNAME
 
 
 def get_first_name(update, context):
@@ -435,14 +463,15 @@ def main():
 
     profile_filler_handler = ConversationHandler(
         entry_points=[
-            CallbackQueryHandler(get_last_name, pattern=f'^{NETWORKING}$')
+            CallbackQueryHandler(start_networking, pattern=f'^{NETWORKING}$'),
+            CallbackQueryHandler(forward_message_to_guest)
         ],
         states={
             LASTNAME:[MessageHandler(filters=Filters.text, callback=get_first_name)],
             FIRSTNAME:[MessageHandler(filters=Filters.text, callback=get_email)],
             EMAIL:[MessageHandler(filters=Filters.text, callback=get_company_name)],
             COMPANY:[MessageHandler(filters=Filters.text, callback=get_phone)],
-            PHONE:[MessageHandler(filters=Filters.contact, callback=finish_profile)]
+            PHONE:[MessageHandler(filters=Filters.contact, callback=finish_profile)],
         },
         fallbacks=[CommandHandler('start', start)],
         map_to_parent=BEGGINNING_STATE
@@ -454,6 +483,7 @@ def main():
     #updater.dispatcher.add_handler(answer_button_handler)
     updater.dispatcher.add_handler(CallbackQueryHandler(get_donation_amount, pattern='make_donation'))
     updater.dispatcher.add_handler(CallbackQueryHandler(cancel_payments, pattern='cancel_donation'))
+    #updater.dispatcher.add_handler(CallbackQueryHandler(forward_message_to_guest, pattern=f'^{SEND_MESSAGE}$'))
     updater.dispatcher.add_handler(PreCheckoutQueryHandler(confirm_payment))
     updater.dispatcher.add_handler(MessageHandler(filters=Filters.all, callback=message_handler))
 
