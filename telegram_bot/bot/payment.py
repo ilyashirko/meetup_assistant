@@ -1,3 +1,4 @@
+from datetime import datetime
 import os
 
 from telegram import LabeledPrice
@@ -45,6 +46,7 @@ def confirm_payment(update, context):
     
     donate = Donate.objects.get(payment_id=update.pre_checkout_query.invoice_payload)
     donate.confirmed = True
+    donate.paid_at = datetime.now()
     donate.save()
     print(os.getenv(f'{donate.user.telegram_id}'))
     os.environ.pop(f'{donate.user.telegram_id}', 'empty')
