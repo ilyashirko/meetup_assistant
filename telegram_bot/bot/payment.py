@@ -3,7 +3,7 @@ import os
 
 from telegram import LabeledPrice
 from telegram_bot.models import Donate, Event, Person
-from telegram_bot.bot.bot_main import start
+from telegram.bot.bot_main
 
 
 def get_donation_amount(update, context):
@@ -51,7 +51,6 @@ def confirm_payment(update, context):
     donate.save()
     print(os.getenv(f'{donate.user.telegram_id}'))
     os.environ.pop(f'{donate.user.telegram_id}', 'empty')
-    return start(update,context)
 
 
 def cancel_payments(update, context):
@@ -65,4 +64,3 @@ def cancel_payments(update, context):
         chat_id=update.effective_chat.id,
         text='Донат отменен'
     )
-    return start(update, context)
