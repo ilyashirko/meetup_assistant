@@ -20,7 +20,7 @@ ANSWER = 'Ответить'
 IGNORE = 'ignore'
 BEGGINNING_STATE, MAKE_NEW_QUESTION, ANSWER_QUESTIONS = range(3)
 LASTNAME, FIRSTNAME, PHONE, EMAIL, COMPANY, SEND_MESSAGE = range(3, 9)
-SCHEDULE, NETWORKING, ASK_QUESTION, DONATE = range(9, 13)
+SCHEDULE, NETWORKING, ASK_QUESTION, DONATE, START_OVER = range(9, 14)
 
 
 def get_keyboard():
@@ -54,7 +54,7 @@ def build_menu(menu_buttons):
 
 def start(update, context):
 
-    user_telegram_id = update.message.from_user.id
+    user_telegram_id = update.effective_chat.id
     context.bot.send_message(
         chat_id=update.effective_chat.id,
         text='Здравствуйте, вы зарегистрированы на событие.'
@@ -74,8 +74,10 @@ def start(update, context):
         start_menu_button_info[QUESTIONS_BUTTON] = QUESTIONS_BUTTON
 
     reply_markup = InlineKeyboardMarkup(build_menu(start_menu_button_info))
-    update.message.reply_text(
-        text="Чем хотите заняться?", reply_markup=reply_markup
+    context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text="Чем хотите заняться?",
+        reply_markup=reply_markup
     )
 
     return BEGGINNING_STATE
@@ -96,12 +98,14 @@ def get_schedule(update, context):
                 text=f'{event.title}\n{event.description}\n{lectures_schedule}'
             )
 
+        return start(update, context)
+
     else:
         context.bot.send_message(
             chat_id=update.effective_chat.id,
             text='На данный момент мероприятий нет'
         )
-
+        return start(update, context)
 
 def ask_question(update, context):
     curr_date_time = timezone.localtime()
@@ -128,7 +132,7 @@ def ask_question(update, context):
             chat_id=update.effective_chat.id,
             text='На данный момент лекции не идут'
         )
-
+        return start(update, context)
     return MAKE_NEW_QUESTION
 
 
@@ -267,7 +271,12 @@ def show_networking_possibilities(update, context):
         chat_id=update.effective_chat.id,
         text='Найти других гостей?',
         reply_markup=InlineKeyboardMarkup(
-            inline_keyboard=[[InlineKeyboardButton('Другие варианты', callback_data=str(NETWORKING))]]
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton('Другие варианты', callback_data=str(NETWORKING)),
+                    InlineKeyboardButton('Вернуться в основное меню', callback_data=str(START_OVER))
+                ]
+            ]
         )
     )
 
@@ -444,10 +453,11 @@ def main():
 
     main_conv_handler = ConversationHandler(
         entry_points=[
-            CommandHandler('start', start)
+            CommandHandler('start', start),
         ],
         states={
             BEGGINNING_STATE:[
+                CallbackQueryHandler(start, pattern=f'^{START_OVER}$'),
                 CallbackQueryHandler(get_schedule, pattern=f'^{SCHEDULE}$'),
                 CallbackQueryHandler(ask_question, pattern=f'^{ASK_QUESTION}$'),
                 CallbackQueryHandler(get_donation_amount, pattern='make_donation'),
@@ -465,7 +475,8 @@ def main():
         },
         fallbacks=[
             CommandHandler('start', start)
-        ]
+        ],
+        allow_reentry=True
     )
 
     profile_filler_handler = ConversationHandler(
@@ -481,7 +492,6 @@ def main():
             PHONE:[MessageHandler(filters=Filters.contact, callback=finish_profile)],
         },
         fallbacks=[CommandHandler('start', start)],
-        map_to_parent=BEGGINNING_STATE,
         allow_reentry=True
     )
     updater.dispatcher.add_handler(main_conv_handler)
