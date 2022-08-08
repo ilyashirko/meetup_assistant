@@ -1,6 +1,7 @@
 import os
 
 from telegram import LabeledPrice
+from telegram_bot.bot.bot_main import get_keyboard
 from telegram_bot.models import Donate, Event, Person
 
 
@@ -57,3 +58,8 @@ def cancel_payments(update, context):
     except Donate.DoesNotExist:
         pass
     os.environ.pop(f'{update.effective_chat.id}', 'empty')
+    context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text='Донат отменен',
+        reply_markup=get_keyboard
+    )
