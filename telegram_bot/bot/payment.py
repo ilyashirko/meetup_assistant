@@ -60,6 +60,5 @@ def cancel_payments(update, context):
     os.environ.pop(f'{update.effective_chat.id}', 'empty')
     context.bot.send_message(
         chat_id=update.effective_chat.id,
-        text='Донат отменен',
-        reply_markup=get_keyboard
+        text='Донат отменен'
     )
