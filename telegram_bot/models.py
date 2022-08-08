@@ -201,7 +201,7 @@ class Donate(models.Model):
     )
     summ = models.IntegerField('Amount', null=True)
     confirmed = models.BooleanField('Payment confirmed', default=False)
-    paid_at = models.DateTimeField('Paid at', blank=True)
+    paid_at = models.DateTimeField('Created or Paid at', blank=True)
 
 
 class AdminMessage(models.Model):
