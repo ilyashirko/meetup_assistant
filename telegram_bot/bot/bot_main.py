@@ -55,11 +55,14 @@ def build_menu(menu_buttons):
 def start(update, context):
 
     user_telegram_id = update.effective_chat.id
-    context.bot.send_message(
-        chat_id=update.effective_chat.id,
-        text='Здравствуйте, вы зарегистрированы на событие.'
-    )
-    curr_person = Person.objects.get_or_create(telegram_id=user_telegram_id)[0]
+    curr_person = Person.objects.get_or_create(telegram_id=user_telegram_id)
+    print(curr_person)
+
+    if curr_person[1]:
+        context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text='Здравствуйте, вы зарегистрированы на событие.'
+        )
     curr_date = timezone.localtime()
 
     start_menu_button_info = {
@@ -70,7 +73,7 @@ def start(update, context):
     }
 
     curr_event = Event.objects.get(start__lt=curr_date, finish__gt=curr_date)
-    if curr_person.is_speaker(curr_event):
+    if curr_person[0].is_speaker(curr_event):
         start_menu_button_info[QUESTIONS_BUTTON] = QUESTIONS_BUTTON
 
     reply_markup = InlineKeyboardMarkup(build_menu(start_menu_button_info))
