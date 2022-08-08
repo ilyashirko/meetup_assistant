@@ -4,7 +4,7 @@ from textwrap import dedent
 import telegram
 from django.utils import timezone
 from dotenv import load_dotenv
-from telegram import (InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup)
+from telegram import (InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup,ReplyKeyboardRemove)
 from telegram.ext import (CallbackContext, CallbackQueryHandler,
                           CommandHandler, MessageHandler,
                           PreCheckoutQueryHandler, Updater,
@@ -386,7 +386,11 @@ def finish_profile(update, context):
     curr_user.company = context.user_data['company']
     curr_user.phone_number = update.message.contact.phone_number
     curr_user.save()
-    print('Регистрация завершена')
+    context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text='Регистрация завершена',
+        reply_markup=ReplyKeyboardRemove()
+    )
 
     return start_networking(update, context)
 
