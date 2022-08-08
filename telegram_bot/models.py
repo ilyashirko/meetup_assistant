@@ -1,9 +1,10 @@
-from textwrap import dedent
-from django.db import models
-from datetime import datetime
 import uuid
-from phonenumber_field.modelfields import PhoneNumberField
+from datetime import datetime
+
 from django.core.validators import MinLengthValidator
+from django.db import models
+from django.utils import timezone
+from phonenumber_field.modelfields import PhoneNumberField
 
 
 class Person(models.Model):
@@ -171,6 +172,8 @@ class Question(models.Model):
         return f'{self.question[:100]}{"..." if len(self.question) < 100 else ""}'
 
 
+def current_time():
+    return datetime.now()
 
 
 class Donate(models.Model):
@@ -198,7 +201,7 @@ class Donate(models.Model):
     )
     summ = models.IntegerField('Amount', null=True)
     confirmed = models.BooleanField('Payment confirmed', default=False)
-    paid_at = models.DateTimeField('Paid at', default=None, blank=True)
+    paid_at = models.DateTimeField('Paid at', auto_now=True, blank=True)
 
 
 class AdminMessage(models.Model):

@@ -13,6 +13,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='donate',
             name='paid_at',
-            field=models.DateTimeField(blank=True, default=None, verbose_name='Paid at'),
+            field=models.DateTimeField(auto_now=True, blank=True, verbose_name='Paid at'),
         ),
     ]
