@@ -51,4 +51,9 @@ def confirm_payment(update, context):
 
 
 def cancel_payments(update, context):
-    pass
+    _, payment_uuid = os.getenv(f'{update.effective_chat.id}').split(':')
+    try:
+        Donate.objects.get(payment_id=payment_uuid).delete()
+    except Donate.DoesNotExist:
+        pass
+    os.environ.pop(f'{update.effective_chat.id}', 'empty')
