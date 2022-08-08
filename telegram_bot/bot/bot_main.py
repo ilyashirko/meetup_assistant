@@ -56,7 +56,6 @@ def start(update, context):
 
     user_telegram_id = update.effective_chat.id
     curr_person = Person.objects.get_or_create(telegram_id=user_telegram_id)
-    print(curr_person)
 
     if curr_person[1]:
         context.bot.send_message(
