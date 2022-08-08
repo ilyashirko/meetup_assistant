@@ -10,7 +10,6 @@ from telegram.ext import (CallbackContext, CallbackQueryHandler,
                           PreCheckoutQueryHandler, Updater,
                           ConversationHandler)
 from telegram.ext.filters import Filters
-from telegram_bot_pagination import InlineKeyboardPaginator
 
 from telegram_bot.bot.payment import (cancel_payments, confirm_payment,
                                       get_donation_amount, make_payment)
@@ -254,7 +253,7 @@ def show_networking_possibilities(update, context):
         chat_id=update.effective_chat.id,
         text='Выберите, с кем хотели бы пообщаться:'
     )
-    available_contacts = Person.objects.exclude(first_name='')
+    available_contacts = Person.objects.exclude(first_name='').order_by('?')[:3]
     for contact in available_contacts:
         text = f'{contact.first_name} {contact.last_name}\n{contact.company}'
         context.bot.send_message(
@@ -264,6 +263,13 @@ def show_networking_possibilities(update, context):
                 inline_keyboard=[[InlineKeyboardButton('Написать', callback_data=f'Telegram id:{contact.telegram_id}')]]
             )
         )
+    context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text='Найти других гостей?',
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=[[InlineKeyboardButton('Другие варианты', callback_data=str(NETWORKING))]]
+        )
+    )
 
 
 def forward_message_to_guest(update, context):
