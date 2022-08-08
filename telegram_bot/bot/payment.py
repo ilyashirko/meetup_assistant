@@ -3,7 +3,7 @@ import os
 
 from telegram import LabeledPrice
 from telegram_bot.models import Donate, Event, Person
-from telegram.bot.bot_main import start
+from telegram_bot.bot.bot_main import start
 
 
 def get_donation_amount(update, context):
