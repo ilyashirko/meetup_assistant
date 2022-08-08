@@ -2,6 +2,7 @@ import os
 from textwrap import dedent
 
 import telegram
+import requests
 from django.utils import timezone
 from dotenv import load_dotenv
 from telegram import (InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup,ReplyKeyboardRemove)
@@ -448,14 +449,26 @@ def message_handler(update: telegram.Update, context: CallbackContext):
     except TypeError:
         pass
 
+
+def message_on_reload(user):
+    requests.get(
+        f'https://api.telegram.org/bot{os.getenv("TG_BOT_TOKEN")}/sendMessage',
+        params={
+            'chat_id': user.telegram_id,
+            'text': 'Для начала работы введите комманду /start'
+        }
+    )
+
+
 def main():
     load_dotenv()
     tg_bot_token = os.getenv('TG_BOT_TOKEN')
 
-    # answer_button_handler = CallbackQueryHandler(callback=button_answer_handler, pattern=ANSWER)
-    #answer_button_handler = CallbackQueryHandler(callback=button_answer_handler)
-
     updater = Updater(token=tg_bot_token, use_context=True)
+
+    all_users = Person.objects.all()
+    for user in all_users:
+        message_on_reload(user)
 
     main_conv_handler = ConversationHandler(
         entry_points=[
@@ -503,11 +516,6 @@ def main():
     updater.dispatcher.add_handler(main_conv_handler)
     updater.dispatcher.add_handler(profile_filler_handler)
 
-
-    #updater.dispatcher.add_handler(answer_button_handler)
-    #updater.dispatcher.add_handler(CallbackQueryHandler(get_donation_amount, pattern='make_donation'))
-    #updater.dispatcher.add_handler(CallbackQueryHandler(cancel_payments, pattern='cancel_donation'))
-    #updater.dispatcher.add_handler(CallbackQueryHandler(forward_message_to_guest, pattern=f'^{SEND_MESSAGE}$'))
     updater.dispatcher.add_handler(PreCheckoutQueryHandler(confirm_payment))
     updater.dispatcher.add_handler(MessageHandler(filters=Filters.all, callback=message_handler))
 
